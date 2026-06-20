@@ -1,4 +1,4 @@
-#include <CommandParser.h>
+#include <cpp_warships/input_parser/include/CommandParser.h>
 #include <cpp_warships/utilities/include/ViewHelper.h>
 #include <cpp_warships/input_parser/include/VoidParser.h>
 #include <cpp_warships/input_parser/include/builder/ConfigCommandBuilder.h>

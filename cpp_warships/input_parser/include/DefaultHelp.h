@@ -1,9 +1,10 @@
 #pragma once
 
 #include <cpp_warships/utilities/include/ViewHelper.h>
+#include <iostream>
+
 #include "model/ParserCommandInfo.h"
 #include "model/ParserParameter.h"
-#include <iostream>
 
 namespace cpp_warships::input_parser {
     class DefaultHelp {

@@ -13,8 +13,8 @@ int main() {
 
     SerializerAggregator<std::string> test_serializer;
     test_serializer.setSerializers(
-        examples::TestClassStringSerializer{},
-        examples::ImplicitTestClassStringSerializer{}
+        new examples::TestClassStringSerializer{},
+        new examples::ImplicitTestClassStringSerializer{}
     );
 
     test_class.implicitClass.stringPublicField = "changed-public";

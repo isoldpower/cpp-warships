@@ -11,7 +11,7 @@
 #include "exceptions/SerializationException.h"
 
 namespace cpp_warships::game_saves {
-    // Forward declarations to avoid circular dependencies
+
     template <typename TSerialized>
     class SerializerAggregator;
 
