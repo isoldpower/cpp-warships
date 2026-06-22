@@ -62,6 +62,7 @@ add_executable(cpp_warships main.cpp
 # Link dependencies
 target_link_libraries(cpp_warships PRIVATE
         nlohmann_json::nlohmann_json
+        ftxui::ftxui
         utilities
         input_parser
         input_reader

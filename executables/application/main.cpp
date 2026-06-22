@@ -9,7 +9,8 @@ int main() {
     Initials::consoleOutInitials();
 
     const std::string filename = "../test.txt";
-    application::GameController controller(new input_reader::config_reader::ConfigInputReader(filename));
+    auto* input_reader = new input_reader::config_reader::ConfigInputReader(filename);
+    application::GameController controller(input_reader);
 
     controller.run();
 
