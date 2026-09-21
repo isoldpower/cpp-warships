@@ -4,4 +4,65 @@ TabWidth: 4
 IndentWidth: 4
 ContinuationIndentWidth: 8
 ColumnLimit: 100
-PointerAlignment: Right
+
+# The codebase attaches * and & to the type, and Google's inference would
+# otherwise override whatever PointerAlignment says.
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+SpacesBeforeTrailingComments: 1
+
+# The project indents declarations inside namespaces.
+NamespaceIndentation: All
+
+# Keep the standard-library / project-header grouping as written.
+IncludeBlocks: Preserve
+SortIncludes: CaseSensitive
+
+# When a call or declaration does not fit on one line, break after the open
+# bracket and give every argument its own line, rather than packing as many
+# as fit per line.
+AlignAfterOpenBracket: AlwaysBreak
+BinPackArguments: false
+BinPackParameters: false
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+PenaltyBreakBeforeFirstCallParameter: 1
+# Never push a return type onto its own line to save a wrap.
+PenaltyReturnTypeOnItsOwnLine: 10000
+
+# Always give a function body its own lines, however short it is. Empty
+# bodies stay as {} rather than splitting across two lines.
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortLambdasOnASingleLine: None
+AllowShortCaseLabelsOnASingleLine: false
+
+# Attach braces as Google does, but keep an empty body as {} rather than
+# splitting it across two lines.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# Constructor initialiser lists: leading comma, one member per line.
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: Never
+ConstructorInitializerIndentWidth: 4

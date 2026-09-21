@@ -9,6 +9,10 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
+# Emit compile_commands.json so clangd and other tooling resolve include paths
+# without depending on a particular IDE's project model.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Enable testing depending on the build type
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     include(CTest)
