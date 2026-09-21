@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5...3.31)
+cmake_minimum_required(VERSION 3.20)
 project (cpp_warships
         VERSION 0.1.0
         DESCRIPTION "C++ terminal-based warships game"
@@ -18,12 +18,9 @@ else()
     message(STATUS "Tests are not available in Release mode")
 endif()
 
-# Libraries list
-add_library(cxx_setup INTERFACE
-        cpp_warships/utilities
-        cpp_warships/input_parser
-        cpp_warships/input_reader
-        cpp_warships/game_saves)
+# Shared compiler settings carrier. Libraries expose their own include roots,
+# so this target deliberately adds no include directories of its own.
+add_library(cxx_setup INTERFACE)
 
 # General compiler options
 if (MSVC)
@@ -34,8 +31,6 @@ endif()
 
 target_compile_features(cxx_setup
         INTERFACE cxx_std_20)
-target_include_directories(cxx_setup
-        INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Subdirectories
 add_subdirectory(external)

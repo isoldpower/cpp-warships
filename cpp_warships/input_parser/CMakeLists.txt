@@ -1,28 +1,28 @@
 # Compile files
 add_library(input_parser
         # Parser
-        include/command/Command.h
-        include/model/Parser.h
-        include/command/ParserCommand.h
-        include/model/ParserCommandInfo.h
-        include/model/ParserParameter.h
+        include/input_parser/command/Command.h
+        include/input_parser/model/Parser.h
+        include/input_parser/command/ParserCommand.h
+        include/input_parser/model/ParserCommandInfo.h
+        include/input_parser/model/ParserParameter.h
         # Void Parser Implementation
-        include/VoidParser.h src/VoidParser.cpp
-        include/DefaultHelp.h src/DefaultHelp.cpp
-        include/DefaultParserError.h src/DefaultParserError.cpp
+        include/input_parser/VoidParser.h src/input_parser/VoidParser.cpp
+        include/input_parser/DefaultHelp.h src/input_parser/DefaultHelp.cpp
+        include/input_parser/DefaultParserError.h src/input_parser/DefaultParserError.cpp
         # Command Parser Implementation
-        include/CommandParser.h src/CommandParser.cpp
-        include/command/ErrorCommand.h src/command/ErrorCommand.cpp
-        include/command/HelpCommand.h src/command/HelpCommand.cpp
-        include/command/ArgumentsErrorCommand.h src/command/ArgumentsErrorCommand.cpp
+        include/input_parser/CommandParser.h src/input_parser/CommandParser.cpp
+        include/input_parser/command/ErrorCommand.h src/input_parser/command/ErrorCommand.cpp
+        include/input_parser/command/HelpCommand.h src/input_parser/command/HelpCommand.cpp
+        include/input_parser/command/ArgumentsErrorCommand.h src/input_parser/command/ArgumentsErrorCommand.cpp
         # Builder
-        include/builder/ConfigCommandBuilder.h
-        include/builder/ParserCommandBuilder.h
-        include/builder/DefaultParameterBuilder.h
-        include/builder/ParserParameterBuilder.h
-        include/builder/CommandBuildDirector.h
-        include/builder/ParameterBuildDirector.h
-        include/builder/ParserBuilderDirector.h)
+        include/input_parser/builder/ConfigCommandBuilder.h
+        include/input_parser/builder/ParserCommandBuilder.h
+        include/input_parser/builder/DefaultParameterBuilder.h
+        include/input_parser/builder/ParserParameterBuilder.h
+        include/input_parser/builder/CommandBuildDirector.h
+        include/input_parser/builder/ParameterBuildDirector.h
+        include/input_parser/builder/ParserBuilderDirector.h)
 
 # Tests setup
 if (BUILD_TESTING)
@@ -35,7 +35,6 @@ endif()
 # Expose settings
 target_include_directories(input_parser
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 # Link dependencies

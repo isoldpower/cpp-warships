@@ -1,4 +1,4 @@
 add_subdirectory(utilities)
-add_subdirectory(game_saves)
+add_subdirectory(serialization)
 add_subdirectory(input_parser)
 add_subdirectory(input_reader)

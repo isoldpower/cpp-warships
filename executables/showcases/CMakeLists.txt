@@ -5,7 +5,7 @@ add_executable(command_parser_showcase command_parser.cpp)
 target_link_libraries(command_parser_showcase PRIVATE utilities input_parser cxx_setup)
 
 add_executable(serialization_showcase serialization.cpp)
-target_link_libraries(serialization_showcase PRIVATE utilities game_saves cxx_setup)
+target_link_libraries(serialization_showcase PRIVATE utilities serialization cxx_setup)
 
 add_executable(terminal_ui_showcase terminal_ui.cpp)
 target_link_libraries(terminal_ui_showcase PRIVATE ftxui::ftxui)

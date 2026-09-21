@@ -1,6 +1,6 @@
 #include <cstddef>
 #include <ftxui/component/screen_interactive.hpp>
-#include "ftxui/component/component.hpp"
+#include <ftxui/component/component.hpp>
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/dom/table.hpp>
 #include <map>

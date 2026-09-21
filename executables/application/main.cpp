@@ -2,7 +2,7 @@
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 
-#include <cpp_warships/utilities/include/Initials.h>
+#include <utilities/Initials.h>
 
 // Placeholder shell for the terminal UI rewrite.
 // Replaced by cpp_warships::game_tui::App once the TUI layer lands.
