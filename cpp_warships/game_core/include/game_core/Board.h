@@ -9,11 +9,8 @@
 #include <game_core/Ship.h>
 
 namespace cpp_warships::game_core {
-    /**
-     * @brief A player's grid: the ships standing on it and the cells attacked so far.
-     *
-     * The board owns its ships by value. Nothing here allocates, prints or reads input.
-     */
+    /** @brief A player's grid: the ships on it and the cells attacked so far.
+     *  Owns its ships by value and performs no input or output. */
     class Board {
     public:
         Board(int width, int height);
@@ -24,28 +21,25 @@ namespace cpp_warships::game_core {
 
         /** @brief Whether a ship of @p length fits at @p origin, and why not when it does not. */
         [[nodiscard]] PlacementError canPlace(
-            Coordinate origin,
-            Direction direction,
-            int length) const;
+                Coordinate origin,
+                Direction direction,
+                int length
+        ) const;
 
-        /**
-         * @brief Places a ship when the placement is legal.
-         * @return PlacementError::None on success, leaving the board untouched otherwise.
-         */
+        /** @brief Places a ship when the placement is legal.
+         *  @return PlacementError::None on success, leaving the board untouched otherwise. */
         PlacementError place(
                 Coordinate origin,
                 Direction direction,
                 int length,
-                int segmentHealth = DEFAULT_SEGMENT_HEALTH);
+                int segmentHealth = DEFAULT_SEGMENT_HEALTH
+        );
 
         /** @brief Removes the ship covering @p coordinate; false when no ship is there. */
         bool removeShipAt(Coordinate coordinate);
 
-        /**
-         * @brief Attacks a cell.
-         *
-         * Repeat attacks on the same cell are rejected rather than dealing damage again.
-         */
+        /** @brief Attacks a cell, which may be struck again while a segment there still lives.
+         *  Resolved cells -- water already shot, or a destroyed segment -- reject further shots. */
         AttackOutcome attack(Coordinate coordinate, int damage);
 
         /** @brief What @p visibility knows about @p coordinate. */
@@ -54,12 +48,8 @@ namespace cpp_warships::game_core {
         /** @brief Whether any ship stands within @p radius of @p center, ignoring fog. */
         [[nodiscard]] bool hasShipWithin(Coordinate center, int radius) const;
 
-        /**
-         * @brief Whether the board holds ships and every one of them is sunk.
-         *
-         * A board with no ships reports false: an empty board means the match has not
-         * been set up yet, not that its owner has lost.
-         */
+        /** @brief Whether the board holds ships and every one of them is sunk.
+         *  An empty board reports false: it is not set up yet, rather than lost. */
         [[nodiscard]] bool allShipsSunk() const;
         [[nodiscard]] bool hasShips() const noexcept;
         [[nodiscard]] const std::vector<Ship>& ships() const noexcept;

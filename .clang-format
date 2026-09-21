@@ -20,9 +20,9 @@ IncludeBlocks: Preserve
 SortIncludes: CaseSensitive
 
 # When a call or declaration does not fit on one line, break after the open
-# bracket and give every argument its own line, rather than packing as many
-# as fit per line.
-AlignAfterOpenBracket: AlwaysBreak
+# bracket, give every argument its own line rather than packing as many as
+# fit, and put the closing bracket on a line of its own.
+AlignAfterOpenBracket: BlockIndent
 BinPackArguments: false
 BinPackParameters: false
 AllowAllArgumentsOnNextLine: false

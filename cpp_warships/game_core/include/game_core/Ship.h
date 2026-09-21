@@ -8,12 +8,8 @@
 #include <game_core/Segment.h>
 
 namespace cpp_warships::game_core {
-    /**
-     * @brief A placed ship: its origin, orientation and per-cell segments.
-     *
-     * The ship derives its occupied coordinates from origin and direction, so segment
-     * index and coordinate always agree.
-     */
+    /** @brief A placed ship: its origin, orientation and per-cell segments.
+     *  Coordinates derive from origin and direction, so index and cell always agree. */
     class Ship {
     public:
         Ship(Coordinate origin,

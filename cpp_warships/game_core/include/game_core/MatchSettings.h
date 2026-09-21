@@ -4,19 +4,16 @@
 #include <game_core/Segment.h>
 
 namespace cpp_warships::game_core {
-    /**
-     * @brief Immutable rules a match is played under.
-     *
-     * Transient combat state such as an armed double-damage shot is match state, not a
-     * setting, and lives in game_flow instead.
-     */
+    /** @brief Immutable rules a match is played under.
+     *  Transient combat state, such as an armed double-damage shot, lives in game_flow. */
     class MatchSettings {
     public:
         MatchSettings(
                 int boardSize,
                 FleetComposition fleet,
                 int baseDamage = 1,
-                int segmentHealth = DEFAULT_SEGMENT_HEALTH);
+                int segmentHealth = DEFAULT_SEGMENT_HEALTH
+        );
 
         /** @brief Settings for @p boardSize with an automatically scaled fleet. */
         [[nodiscard]] static MatchSettings forBoardSize(int boardSize);

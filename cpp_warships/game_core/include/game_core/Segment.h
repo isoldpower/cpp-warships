@@ -3,9 +3,7 @@
 namespace cpp_warships::game_core {
     inline constexpr int DEFAULT_SEGMENT_HEALTH = 2;
 
-    /**
-     * @brief One cell of a ship, tracking its own hit points.
-     */
+    /** @brief One cell of a ship, tracking its own hit points. */
     class Segment {
     public:
         explicit Segment(int maximumHealth) noexcept;

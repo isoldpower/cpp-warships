@@ -23,12 +23,15 @@ namespace cpp_warships::game_core {
     }
 
     const Ship* Board::shipAt(Coordinate coordinate) const noexcept {
+        const auto occupiesCoordinate = [coordinate](const Ship& ship) {
+            return ship.occupies(coordinate);
+        };
+
         const auto foundShip = std::find_if(
             ships_.begin(),
             ships_.end(),
-            [coordinate](const Ship& ship) {
-                return ship.occupies(coordinate);
-            });
+            occupiesCoordinate
+        );
 
         return foundShip == ships_.end() ? nullptr : &*foundShip;
     }
@@ -46,9 +49,10 @@ namespace cpp_warships::game_core {
     }
 
     PlacementError Board::canPlace(
-        const Coordinate origin,
-        const Direction direction,
-        const int length) const {
+            const Coordinate origin,
+            const Direction direction,
+            const int length
+    ) const {
         if (length <= 0) {
             return PlacementError::InvalidLength;
         }
@@ -73,7 +77,8 @@ namespace cpp_warships::game_core {
             Coordinate origin,
             Direction direction,
             int length,
-            int segmentHealth) {
+            int segmentHealth
+    ) {
         const PlacementError error = canPlace(origin, direction, length);
         if (error != PlacementError::None) {
             return error;
@@ -84,12 +89,15 @@ namespace cpp_warships::game_core {
     }
 
     bool Board::removeShipAt(Coordinate coordinate) {
+        const auto occupiesCoordinate = [coordinate](const Ship& ship) {
+            return ship.occupies(coordinate);
+        };
+
         const auto foundShip = std::find_if(
             ships_.begin(),
             ships_.end(),
-            [coordinate](const Ship& ship) {
-                return ship.occupies(coordinate);
-            });
+            occupiesCoordinate
+        );
 
         if (foundShip == ships_.end()) {
             return false;
@@ -100,27 +108,36 @@ namespace cpp_warships::game_core {
     }
 
     AttackOutcome Board::attack(Coordinate coordinate, int damage) {
+        const auto occupiesCoordinate = [coordinate](const Ship& ship) {
+            return ship.occupies(coordinate);
+        };
+
         if (!contains(coordinate)) {
             return AttackOutcome::OutOfBounds;
-        } else if (attackedCells_.contains(coordinate)) {
-            return AttackOutcome::AlreadyAttacked;
         }
 
-        attackedCells_.insert(coordinate);
         const auto targetShip = std::find_if(
             ships_.begin(),
             ships_.end(),
-            [coordinate](const Ship& ship) {
-                return ship.occupies(coordinate);
-            });
+            occupiesCoordinate
+        );
 
         if (targetShip == ships_.end()) {
+            if (attackedCells_.contains(coordinate)) {
+                return AttackOutcome::AlreadyAttacked;
+            }
+
+            attackedCells_.insert(coordinate);
             return AttackOutcome::Miss;
         } else {
             const std::optional<int> index = targetShip->segmentIndexAt(coordinate);
-            targetShip->damageSegment(*index, damage);
+            if (targetShip->segmentHealth(*index) == 0) {
+                return AttackOutcome::AlreadyAttacked;
+            }
 
-            return targetShip->isSunk() ? AttackOutcome::Sunk: AttackOutcome::Hit;
+            attackedCells_.insert(coordinate);
+            targetShip->damageSegment(*index, damage);
+            return targetShip->isSunk() ? AttackOutcome::Sunk : AttackOutcome::Hit;
         }
     }
 
@@ -153,12 +170,19 @@ namespace cpp_warships::game_core {
     }
 
     bool Board::allShipsSunk() const {
-        return !ships_.empty() && std::all_of(
+        const auto isShipSunk = [](const Ship& ship) {
+            return ship.isSunk();
+        };
+
+        if (ships_.empty()) {
+            return false;
+        }
+
+        return std::all_of(
             ships_.begin(),
             ships_.end(),
-            [](const Ship& ship) {
-                return ship.isSunk();
-            });
+            isShipSunk
+        );
     }
 
     bool Board::hasShips() const noexcept {

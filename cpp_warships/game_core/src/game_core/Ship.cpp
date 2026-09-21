@@ -11,6 +11,7 @@ namespace cpp_warships::game_core {
         : origin_(origin)
         , direction_(direction) {
         segments_.reserve(static_cast<std::size_t>(std::max(0, length)));
+
         for (int index = 0; index < length; ++index) {
             segments_.emplace_back(segmentHealth);
         }
@@ -82,12 +83,15 @@ namespace cpp_warships::game_core {
     }
 
     bool Ship::isSunk() const noexcept {
+        const auto isSegmentDestroyed = [](const Segment& segment) {
+            return segment.isDestroyed();
+        };
+
         return std::all_of(
             segments_.begin(),
             segments_.end(),
-            [](const Segment& segment) {
-                return segment.isDestroyed();
-            });
+            isSegmentDestroyed
+        );
     }
 
     const std::vector<Segment>& Ship::segments() const noexcept {

@@ -8,14 +8,18 @@ namespace cpp_warships::game_core {
             int boardSize,
             FleetComposition fleet,
             int baseDamage,
-            int segmentHealth)
+            int segmentHealth
+    )
         : boardSize_(boardSize)
         , fleet_(std::move(fleet))
         , baseDamage_(baseDamage)
         , segmentHealth_(segmentHealth) {}
 
     MatchSettings MatchSettings::forBoardSize(int boardSize) {
-        return MatchSettings{boardSize, FleetComposition::forBoardSize(boardSize)};
+        return MatchSettings{
+            boardSize,
+            FleetComposition::forBoardSize(boardSize)
+        };
     }
 
     int MatchSettings::boardSize() const noexcept {

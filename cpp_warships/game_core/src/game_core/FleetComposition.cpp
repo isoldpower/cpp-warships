@@ -27,7 +27,8 @@ namespace cpp_warships::game_core {
         const auto boardSizeAsFloat = static_cast<float>(boardSize);
         const float scaleFactor = boardSizeAsFloat / REFERENCE_BOARD_SIZE;
         int remainingCells = static_cast<int>(
-            boardSizeAsFloat * boardSizeAsFloat * SHIP_COVERED_AREA_RATIO);
+            boardSizeAsFloat * boardSizeAsFloat * SHIP_COVERED_AREA_RATIO
+        );
 
         std::map<int, int> counts;
         for (std::size_t index = 0; index < SHIP_LENGTHS.size(); ++index) {
@@ -54,23 +55,29 @@ namespace cpp_warships::game_core {
     }
 
     int FleetComposition::totalShips() const {
-        return std::accumulate(
-                countsByLength_.begin(),
-                countsByLength_.end(),
-                0,
-                [](int sum, const std::pair<const int, int>& entry) {
-                    return sum + entry.second;
-                });
-    }
+        const auto addShipCount = [](int sum, const std::pair<const int, int>& entry) {
+            return sum + entry.second;
+        };
 
-    int FleetComposition::totalCells() const {
         return std::accumulate(
             countsByLength_.begin(),
             countsByLength_.end(),
             0,
-            [](int sum, const std::pair<const int, int>& entry) {
-                return sum + entry.first * entry.second;
-            });
+            addShipCount
+        );
+    }
+
+    int FleetComposition::totalCells() const {
+        const auto addOccupiedCells = [](int sum, const std::pair<const int, int>& entry) {
+            return sum + entry.first * entry.second;
+        };
+
+        return std::accumulate(
+            countsByLength_.begin(),
+            countsByLength_.end(),
+            0,
+            addOccupiedCells
+        );
     }
 
     bool FleetComposition::isEmpty() const noexcept {
