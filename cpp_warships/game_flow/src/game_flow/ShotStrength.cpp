@@ -7,8 +7,11 @@ namespace cpp_warships::game_flow {
     } // namespace
 
     ShotStrength::ShotStrength(int baseDamage)
+        : ShotStrength(baseDamage, false) {}
+
+    ShotStrength::ShotStrength(int baseDamage, bool isDoubleDamageArmed)
         : baseDamage_(baseDamage)
-        , isDoubleDamageArmed_(false) {}
+        , isDoubleDamageArmed_(isDoubleDamageArmed) {}
 
     int ShotStrength::baseDamage() const noexcept {
         return baseDamage_;

@@ -38,12 +38,7 @@ namespace cpp_warships::game_flow {
             return total + entry.second;
         };
 
-        return std::accumulate(
-            remaining_.begin(),
-            remaining_.end(),
-            0,
-            addRemaining
-        );
+        return std::accumulate(remaining_.begin(), remaining_.end(), 0, addRemaining);
     }
 
     bool PlacementPlan::isComplete() const {
@@ -59,17 +54,9 @@ namespace cpp_warships::game_flow {
 
         std::vector<int> lengthsToPlace;
         for (const auto& [length, count] : composition.countsByLength()) {
-            lengthsToPlace.insert(
-                lengthsToPlace.end(),
-                static_cast<std::size_t>(count),
-                length
-            );
+            lengthsToPlace.insert(lengthsToPlace.end(), static_cast<std::size_t>(count), length);
         }
-        std::sort(
-            lengthsToPlace.begin(),
-            lengthsToPlace.end(),
-            std::greater<>()
-        );
+        std::sort(lengthsToPlace.begin(), lengthsToPlace.end(), std::greater<>());
 
         std::uniform_int_distribution<int> columnDistribution{0, board.width() - 1};
         std::uniform_int_distribution<int> rowDistribution{0, board.height() - 1};

@@ -7,7 +7,7 @@
 #include <serialization/ISerializable.h>
 #include <serialization/helpers/serializers/JsonStringSerializer.h>
 
-namespace cpp_warships::game_saves::examples {
+namespace cpp_warships::serialization::examples {
     using namespace helpers::serializers;
 
     // Test class serializer TName definition.
@@ -67,5 +67,5 @@ namespace cpp_warships::game_saves::examples {
 
         return os;
     }
-} // namespace cpp_warships::game_saves::examples
+} // namespace cpp_warships::serialization::examples
 

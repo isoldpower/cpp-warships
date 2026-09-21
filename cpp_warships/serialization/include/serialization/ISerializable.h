@@ -4,7 +4,7 @@
 
 #include <serialization/exceptions/InterpretationException.h>
 
-namespace cpp_warships::game_saves {
+namespace cpp_warships::serialization {
     // Forward declarations to avoid circular dependencies.
     class ISerializableBase;
 

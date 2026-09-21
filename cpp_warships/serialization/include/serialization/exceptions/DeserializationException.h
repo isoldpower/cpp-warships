@@ -3,7 +3,7 @@
 #include <exception>
 #include <string>
 
-namespace cpp_warships::game_saves::exceptions {
+namespace cpp_warships::serialization::exceptions {
     /**
      * @brief Exception thrown when deserialization of a specific object fails.
      */
@@ -34,4 +34,4 @@ namespace cpp_warships::game_saves::exceptions {
         }
     };
 
-} // namespace cpp_warships::game_saves::exceptions
+} // namespace cpp_warships::serialization::exceptions

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <optional>
 
 #include <game_core/Board.h>
@@ -27,9 +28,25 @@ namespace cpp_warships::game_flow {
 
     /** @brief A game in progress: two boards, whose turn it is and what has happened.
      *  Decides everything and draws nothing, reporting events for the interface to render. */
+    /** @brief Everything a match needs to carry on from where a save left off. */
+    struct MatchRestoreState {
+        game_core::Board playerBoard;
+        game_core::Board computerBoard;
+        std::deque<SkillKind> bankedSkills;
+        int roundNumber = 1;
+        MatchPhase phase = MatchPhase::Placement;
+        Participant currentTurn = Participant::Player;
+        bool isDoubleDamageArmed = false;
+    };
+
     class Match : private SkillContext {
     public:
         Match(game_core::MatchSettings settings, RandomEngine& randomEngine);
+
+        /** @brief Resumes a match from @p state rather than starting a fresh one. */
+        Match(game_core::MatchSettings settings,
+              RandomEngine& randomEngine,
+              MatchRestoreState state);
 
         [[nodiscard]] const game_core::MatchSettings& settings() const noexcept;
         [[nodiscard]] MatchPhase phase() const noexcept;
@@ -37,8 +54,6 @@ namespace cpp_warships::game_flow {
 
         [[nodiscard]] const game_core::Board& playerBoard() const noexcept;
         [[nodiscard]] const game_core::Board& computerBoard() const noexcept;
-
-        // -- placement phase ------------------------------------------------
 
         /** @brief The player's board, writable so the placement screen can lay out ships. */
         [[nodiscard]] game_core::Board& editablePlayerBoard() noexcept;
@@ -51,9 +66,9 @@ namespace cpp_warships::game_flow {
          *  @return false when the player's fleet is not fully placed. */
         bool beginBattle();
 
-        // -- battle phase ---------------------------------------------------
-
         [[nodiscard]] bool isPlayerTurn() const noexcept;
+        [[nodiscard]] Participant currentTurn() const noexcept;
+        [[nodiscard]] bool isDoubleDamageArmed() const noexcept;
 
         /** @brief Fires at the computer's board on the player's behalf.
          *  A hit keeps the turn, a miss passes it, and a rejected shot costs nothing. */
@@ -61,8 +76,6 @@ namespace cpp_warships::game_flow {
 
         /** @brief Plays the computer's shots until it misses or the match ends. */
         void runComputerTurn();
-
-        // -- skills ---------------------------------------------------------
 
         [[nodiscard]] const SkillQueue& skills() const noexcept;
 
@@ -73,13 +86,10 @@ namespace cpp_warships::game_flow {
          *  @return false when nothing is banked, or a needed target is missing. */
         bool applyNextSkill(std::optional<game_core::Coordinate> scanTarget = std::nullopt);
 
-        // -- events ---------------------------------------------------------
-
         /** @brief Returns everything that happened since the last call and clears the log. */
         MatchEventLog drainEvents();
 
     private:
-        // SkillContext: the primitives a skill is allowed to act through.
         [[nodiscard]] const game_core::Board& enemyBoard() const override;
         [[nodiscard]] RandomEngine& randomEngine() override;
         void strikeEnemyCell(game_core::Coordinate coordinate) override;

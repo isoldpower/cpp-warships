@@ -7,7 +7,7 @@
 #include <serialization/helpers/TupleBuilder.h>
 
 
-namespace cpp_warships::game_saves {
+namespace cpp_warships::serialization {
     // Forward declarations to avoid circular dependencies.
     class ISerializerBase;
 
@@ -172,4 +172,4 @@ namespace cpp_warships::game_saves {
          */
         std::tuple<TChildren...> childrenSerializers;
     };
-} // namespace cpp_warships::game_saves
+} // namespace cpp_warships::serialization

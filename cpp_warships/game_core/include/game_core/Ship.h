@@ -12,6 +12,9 @@ namespace cpp_warships::game_core {
      *  Coordinates derive from origin and direction, so index and cell always agree. */
     class Ship {
     public:
+        /** @brief Rebuilds a ship with segments already part-damaged, as when loading a save. */
+        Ship(Coordinate origin, Direction direction, std::vector<Segment> segments);
+
         Ship(Coordinate origin,
              Direction direction,
              int length,

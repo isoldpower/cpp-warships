@@ -1,7 +1,6 @@
 #include <game_flow/SkillBehaviour.h>
 
-#include <array>
-#include <cstddef>
+#include <unordered_map>
 #include <vector>
 
 namespace cpp_warships::game_flow {
@@ -93,15 +92,14 @@ namespace cpp_warships::game_flow {
         const DoubleDamageBehaviour DOUBLE_DAMAGE_BEHAVIOUR;
         const RandomStrikeBehaviour RANDOM_STRIKE_BEHAVIOUR;
 
-        /** @brief Behaviours in SkillKind's declaration order, indexed by the enum. */
-        const std::array<const SkillBehaviour*, 3> BEHAVIOURS_BY_SKILL{
-                &SCANNER_BEHAVIOUR,       // Scanner
-                &DOUBLE_DAMAGE_BEHAVIOUR, // DoubleDamage
-                &RANDOM_STRIKE_BEHAVIOUR  // RandomStrike
+        const std::unordered_map<SkillKind, const SkillBehaviour*> BEHAVIOUR_BY_SKILL{
+                {SkillKind::Scanner, &SCANNER_BEHAVIOUR},
+                {SkillKind::DoubleDamage, &DOUBLE_DAMAGE_BEHAVIOUR},
+                {SkillKind::RandomStrike, &RANDOM_STRIKE_BEHAVIOUR}
         };
     } // namespace
 
     const SkillBehaviour& behaviourFor(SkillKind skill) {
-        return *BEHAVIOURS_BY_SKILL.at(static_cast<std::size_t>(skill));
+        return *BEHAVIOUR_BY_SKILL.at(skill);
     }
 } // namespace cpp_warships::game_flow

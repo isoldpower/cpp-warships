@@ -5,7 +5,7 @@
 #include <serialization/example/ImplicitTestClass.h>
 #include <serialization/SerializerAggregator.h>
 
-using namespace cpp_warships::game_saves;
+using namespace cpp_warships::serialization;
 
 int main() {
     examples::TestClass test_class;

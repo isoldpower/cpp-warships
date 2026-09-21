@@ -6,6 +6,7 @@ namespace cpp_warships::game_flow {
     class ShotStrength {
     public:
         explicit ShotStrength(int baseDamage);
+        ShotStrength(int baseDamage, bool isDoubleDamageArmed);
 
         [[nodiscard]] int baseDamage() const noexcept;
 

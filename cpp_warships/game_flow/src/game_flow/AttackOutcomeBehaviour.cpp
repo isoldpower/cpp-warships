@@ -1,7 +1,6 @@
 #include <game_flow/AttackOutcomeBehaviour.h>
 
-#include <array>
-#include <cstddef>
+#include <unordered_map>
 
 #include <game_flow/AiOpponent.h>
 
@@ -30,9 +29,7 @@ namespace cpp_warships::game_flow {
                     AiOpponent&,
                     game_core::Coordinate,
                     const game_core::Board&
-            ) const override {
-                // A miss tells the hunt nothing beyond the cell already being marked.
-            }
+            ) const override {}
         };
 
         /** @brief A shot that wounded a ship without finishing it: the shooter fires again. */
@@ -116,9 +113,7 @@ namespace cpp_warships::game_flow {
                     AiOpponent&,
                     game_core::Coordinate,
                     const game_core::Board&
-            ) const override {
-                // Nothing happened, so the hunt is unchanged.
-            }
+            ) const override {}
         };
 
         const MissBehaviour MISS_BEHAVIOUR;
@@ -126,17 +121,17 @@ namespace cpp_warships::game_flow {
         const SunkBehaviour SUNK_BEHAVIOUR;
         const RejectedBehaviour REJECTED_BEHAVIOUR;
 
-        /** @brief Behaviours in AttackOutcome's declaration order, indexed by the enum. */
-        const std::array<const AttackOutcomeBehaviour*, 5> BEHAVIOURS_BY_OUTCOME{
-                &MISS_BEHAVIOUR,     // Miss
-                &HIT_BEHAVIOUR,      // Hit
-                &SUNK_BEHAVIOUR,     // Sunk
-                &REJECTED_BEHAVIOUR, // AlreadyAttacked
-                &REJECTED_BEHAVIOUR  // OutOfBounds
-        };
+        const std::unordered_map<game_core::AttackOutcome, const AttackOutcomeBehaviour*>
+                BEHAVIOUR_BY_OUTCOME{
+                        {game_core::AttackOutcome::Miss, &MISS_BEHAVIOUR},
+                        {game_core::AttackOutcome::Hit, &HIT_BEHAVIOUR},
+                        {game_core::AttackOutcome::Sunk, &SUNK_BEHAVIOUR},
+                        {game_core::AttackOutcome::AlreadyAttacked, &REJECTED_BEHAVIOUR},
+                        {game_core::AttackOutcome::OutOfBounds, &REJECTED_BEHAVIOUR}
+                };
     } // namespace
 
     const AttackOutcomeBehaviour& behaviourFor(game_core::AttackOutcome outcome) {
-        return *BEHAVIOURS_BY_OUTCOME.at(static_cast<std::size_t>(outcome));
+        return *BEHAVIOUR_BY_OUTCOME.at(outcome);
     }
 } // namespace cpp_warships::game_flow

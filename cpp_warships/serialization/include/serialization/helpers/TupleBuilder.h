@@ -3,7 +3,7 @@
 #include <tuple>
 #include <type_traits>
 
-namespace cpp_warships::game_saves::helpers {
+namespace cpp_warships::serialization::helpers {
     // Forward declarations to avoid circular dependencies
     template <typename T, typename... Ts>
     struct is_one_of;
@@ -75,4 +75,4 @@ namespace cpp_warships::game_saves::helpers {
             return std::tuple<TChildren...>(select_arg<std::tuple_element_t<Is, std::tuple<TChildren...>>>(std::forward<Args>(args)...)...);
         }
     };
-} // namespace cpp_warships::game_saves::helpers
+} // namespace cpp_warships::serialization::helpers

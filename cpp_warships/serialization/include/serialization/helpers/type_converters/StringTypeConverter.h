@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace cpp_warships::game_saves::helpers::type_converters {
+namespace cpp_warships::serialization::helpers::type_converters {
     /**
      * @brief StringTypeConverter is a utility class that provides methods to convert from string to various types and vice versa.
      */
@@ -37,4 +37,4 @@ namespace cpp_warships::game_saves::helpers::type_converters {
             }
         }
     };
-} // namespace cpp_warships::game_saves::helpers
+} // namespace cpp_warships::serialization::helpers

@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace cpp_warships::game_saves::helpers::serializers {
+namespace cpp_warships::serialization::helpers::serializers {
     /**
      * @brief JsonStringSerializer is a utility class that provides methods to extract field values from a serialized string representation.
      *
@@ -127,4 +127,4 @@ namespace cpp_warships::game_saves::helpers::serializers {
             return "{\n" + result + "};\n";
         }
     };
-} // namespace cpp_warships::game_saves::helpers::serializers
+} // namespace cpp_warships::serialization::helpers::serializers

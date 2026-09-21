@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <optional>
 #include <stdexcept>
+#include <utility>
 
 namespace cpp_warships::game_core {
 
@@ -16,6 +17,11 @@ namespace cpp_warships::game_core {
             segments_.emplace_back(segmentHealth);
         }
     }
+
+    Ship::Ship(Coordinate origin, Direction direction, std::vector<Segment> segments)
+        : origin_(origin)
+        , direction_(direction)
+        , segments_(std::move(segments)) {}
 
     Coordinate Ship::origin() const noexcept {
         return origin_;
@@ -87,11 +93,7 @@ namespace cpp_warships::game_core {
             return segment.isDestroyed();
         };
 
-        return std::all_of(
-            segments_.begin(),
-            segments_.end(),
-            isSegmentDestroyed
-        );
+        return std::all_of(segments_.begin(), segments_.end(), isSegmentDestroyed);
     }
 
     const std::vector<Segment>& Ship::segments() const noexcept {

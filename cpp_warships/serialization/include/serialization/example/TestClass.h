@@ -6,7 +6,7 @@
 #include <serialization/helpers/serializers/JsonStringSerializer.h>
 #include <serialization/helpers/type_converters/StringTypeConverter.h>
 
-namespace cpp_warships::game_saves::examples {
+namespace cpp_warships::serialization::examples {
     using namespace helpers::serializers;
     using namespace helpers::type_converters;
 
@@ -92,4 +92,4 @@ namespace cpp_warships::game_saves::examples {
 
         return os;
     }
-} // namespace cpp_warships::game_saves::examples
+} // namespace cpp_warships::serialization::examples

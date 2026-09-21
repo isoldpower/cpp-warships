@@ -14,6 +14,7 @@ namespace cpp_warships::game_flow {
     class SkillManager {
     public:
         explicit SkillManager(RandomEngine& randomEngine);
+        SkillManager(RandomEngine& randomEngine, SkillQueue bank);
 
         /** @brief Banks the opening hand of one of every skill, in random order. */
         void grantOpeningHand();

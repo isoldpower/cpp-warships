@@ -3,7 +3,7 @@
 #include <exception>
 #include <string>
 
-namespace cpp_warships::game_saves::exceptions {
+namespace cpp_warships::serialization::exceptions {
 
     /**
      * @brief Exception thrown when down-casting fails or when configured object cannot be interpreted correctly.
@@ -32,4 +32,4 @@ namespace cpp_warships::game_saves::exceptions {
         }
     };
 
-} // namespace cpp_warships::game_saves::exceptions
+} // namespace cpp_warships::serialization::exceptions

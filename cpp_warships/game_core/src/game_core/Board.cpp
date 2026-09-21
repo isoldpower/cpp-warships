@@ -2,12 +2,24 @@
 
 #include <algorithm>
 #include <optional>
+#include <utility>
 
 namespace cpp_warships::game_core {
 
     Board::Board(int width, int height)
         : width_(std::max(0, width))
         , height_(std::max(0, height)) {}
+
+    Board::Board(
+            int width,
+            int height,
+            std::vector<Ship> ships,
+            std::unordered_set<Coordinate> attackedCells
+    )
+        : width_(std::max(0, width))
+        , height_(std::max(0, height))
+        , ships_(std::move(ships))
+        , attackedCells_(std::move(attackedCells)) {}
 
     int Board::width() const noexcept {
         return width_;
@@ -27,11 +39,7 @@ namespace cpp_warships::game_core {
             return ship.occupies(coordinate);
         };
 
-        const auto foundShip = std::find_if(
-            ships_.begin(),
-            ships_.end(),
-            occupiesCoordinate
-        );
+        const auto foundShip = std::find_if(ships_.begin(), ships_.end(), occupiesCoordinate);
 
         return foundShip == ships_.end() ? nullptr : &*foundShip;
     }
@@ -93,11 +101,7 @@ namespace cpp_warships::game_core {
             return ship.occupies(coordinate);
         };
 
-        const auto foundShip = std::find_if(
-            ships_.begin(),
-            ships_.end(),
-            occupiesCoordinate
-        );
+        const auto foundShip = std::find_if(ships_.begin(), ships_.end(), occupiesCoordinate);
 
         if (foundShip == ships_.end()) {
             return false;
@@ -116,11 +120,7 @@ namespace cpp_warships::game_core {
             return AttackOutcome::OutOfBounds;
         }
 
-        const auto targetShip = std::find_if(
-            ships_.begin(),
-            ships_.end(),
-            occupiesCoordinate
-        );
+        const auto targetShip = std::find_if(ships_.begin(), ships_.end(), occupiesCoordinate);
 
         if (targetShip == ships_.end()) {
             if (attackedCells_.contains(coordinate)) {
@@ -178,11 +178,7 @@ namespace cpp_warships::game_core {
             return false;
         }
 
-        return std::all_of(
-            ships_.begin(),
-            ships_.end(),
-            isShipSunk
-        );
+        return std::all_of(ships_.begin(), ships_.end(), isShipSunk);
     }
 
     bool Board::hasShips() const noexcept {

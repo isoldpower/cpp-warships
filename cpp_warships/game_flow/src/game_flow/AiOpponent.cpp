@@ -90,10 +90,7 @@ namespace cpp_warships::game_flow {
                     untriedNeighbours(currentTargetHits_.front(), board);
 
             if (!neighbours.empty()) {
-                std::uniform_int_distribution<std::size_t> distribution{
-                    0,
-                    neighbours.size() - 1
-                };
+                std::uniform_int_distribution<std::size_t> distribution{0, neighbours.size() - 1};
 
                 return neighbours[distribution(randomEngine_)];
             }
@@ -110,10 +107,7 @@ namespace cpp_warships::game_flow {
         for (const game_core::Coordinate& hit : currentTargetHits_) {
             for (int rowOffset = -1; rowOffset <= 1; ++rowOffset) {
                 for (int columnOffset = -1; columnOffset <= 1; ++columnOffset) {
-                    const game_core::Coordinate neighbour{
-                        hit.x + columnOffset,
-                        hit.y + rowOffset
-                    };
+                    const game_core::Coordinate neighbour{hit.x + columnOffset, hit.y + rowOffset};
 
                     if (board.contains(neighbour)) {
                         attemptedCoordinates_.insert(neighbour);

@@ -15,6 +15,12 @@ namespace cpp_warships::game_core {
     public:
         Board(int width, int height);
 
+        /** @brief Rebuilds a board with ships and shots already on it, as when loading a save. */
+        Board(int width,
+              int height,
+              std::vector<Ship> ships,
+              std::unordered_set<Coordinate> attackedCells);
+
         [[nodiscard]] int width() const noexcept;
         [[nodiscard]] int height() const noexcept;
         [[nodiscard]] bool contains(Coordinate coordinate) const noexcept;

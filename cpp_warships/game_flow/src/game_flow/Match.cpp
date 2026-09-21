@@ -17,6 +17,22 @@ namespace cpp_warships::game_flow {
         skillManager_.grantOpeningHand();
     }
 
+    Match::Match(
+            game_core::MatchSettings settings,
+            RandomEngine& randomEngine,
+            MatchRestoreState state
+    )
+        : settings_(std::move(settings))
+        , randomEngine_(randomEngine)
+        , playerBoard_(std::move(state.playerBoard))
+        , computerBoard_(std::move(state.computerBoard))
+        , aiOpponent_(randomEngine)
+        , skillManager_(randomEngine, SkillQueue{std::move(state.bankedSkills)})
+        , shotStrength_(settings_.baseDamage(), state.isDoubleDamageArmed)
+        , turnOrder_(state.currentTurn)
+        , phase_(state.phase)
+        , roundNumber_(state.roundNumber) {}
+
     const game_core::MatchSettings& Match::settings() const noexcept {
         return settings_;
     }
@@ -35,6 +51,14 @@ namespace cpp_warships::game_flow {
 
     const game_core::Board& Match::computerBoard() const noexcept {
         return computerBoard_;
+    }
+
+    Participant Match::currentTurn() const noexcept {
+        return turnOrder_.current();
+    }
+
+    bool Match::isDoubleDamageArmed() const noexcept {
+        return shotStrength_.isDoubleDamageArmed();
     }
 
     game_core::Board& Match::editablePlayerBoard() noexcept {
@@ -88,27 +112,18 @@ namespace cpp_warships::game_flow {
             Participant actor
     ) {
         const AttackOutcomeBehaviour& behaviour = behaviourFor(outcome);
-        events_.record(
-            {.kind = behaviour.eventKind(),
-                .actor = actor,
-                .coordinate = coordinate}
-        );
+        events_.record({.kind = behaviour.eventKind(), .actor = actor, .coordinate = coordinate});
 
         if (behaviour.grantsSkill() && actor == Participant::Player) {
             const SkillKind granted = skillManager_.grantRandom();
             events_.record(
-                    {.kind = MatchEventKind::SkillGranted,
-                        .actor = actor,
-                        .skill = granted}
+                    {.kind = MatchEventKind::SkillGranted, .actor = actor, .skill = granted}
             );
         }
 
         if (!behaviour.keepsTurn()) {
             turnOrder_.pass();
-            events_.record(
-                {.kind = MatchEventKind::TurnPassed,
-                    .actor = turnOrder_.current()}
-            );
+            events_.record({.kind = MatchEventKind::TurnPassed, .actor = turnOrder_.current()});
         }
     }
 
@@ -170,10 +185,7 @@ namespace cpp_warships::game_flow {
             concludeAsLoss();
         } else {
             turnOrder_.giveTo(Participant::Player);
-            events_.record(
-                {.kind = MatchEventKind::TurnPassed,
-                    .actor = Participant::Player}
-            );
+            events_.record({.kind = MatchEventKind::TurnPassed, .actor = Participant::Player});
         }
     }
 

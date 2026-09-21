@@ -10,7 +10,7 @@
 #include <serialization/exceptions/InterpretationException.h>
 #include <serialization/exceptions/SerializationException.h>
 
-namespace cpp_warships::game_saves {
+namespace cpp_warships::serialization {
 
     template <typename TSerialized>
     class SerializerAggregator;
@@ -146,4 +146,4 @@ namespace cpp_warships::game_saves {
             );
         }
     };
-} // namespace cpp_warships::game_saves
+} // namespace cpp_warships::serialization

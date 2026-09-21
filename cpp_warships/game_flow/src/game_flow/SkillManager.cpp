@@ -1,9 +1,15 @@
 #include <game_flow/SkillManager.h>
 
+#include <utility>
+
 namespace cpp_warships::game_flow {
 
     SkillManager::SkillManager(RandomEngine& randomEngine)
         : randomEngine_(randomEngine) {}
+
+    SkillManager::SkillManager(RandomEngine& randomEngine, SkillQueue bank)
+        : randomEngine_(randomEngine)
+        , bank_(std::move(bank)) {}
 
     void SkillManager::grantOpeningHand() {
         bank_.grantAllShuffled(randomEngine_);
