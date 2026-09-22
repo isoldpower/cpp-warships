@@ -8,6 +8,7 @@
 #include <ftxui/dom/elements.hpp>
 
 #include <game_tui/screens/MenuEventHandlers.h>
+#include <game_tui/views/KeyHint.h>
 
 namespace cpp_warships::game_tui {
     namespace {
@@ -19,18 +20,6 @@ namespace cpp_warships::game_tui {
                              ftxui::hcenter,
                      ftxui::text("a terminal fleet engagement") | ftxui::color(theme.textMuted) |
                              ftxui::hcenter}
-            );
-        }
-
-        ftxui::Element keyHint(
-                const Theme& theme,
-                const std::string& key,
-                const std::string& description
-        ) {
-            return ftxui::hbox(
-                    {ftxui::text(" " + key + " ") | ftxui::color(theme.background) |
-                             ftxui::bgcolor(theme.accent),
-                     ftxui::text("  " + description) | ftxui::color(theme.text)}
             );
         }
     } // namespace

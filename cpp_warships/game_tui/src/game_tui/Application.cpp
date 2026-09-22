@@ -9,7 +9,9 @@
 #include <ftxui/dom/elements.hpp>
 
 #include <game_core/MatchSettings.h>
+#include <game_tui/MatchQuery.h>
 #include <game_tui/screens/MenuScreen.h>
+#include <game_tui/screens/PlacementScreen.h>
 
 namespace cpp_warships::game_tui {
 
@@ -26,8 +28,14 @@ namespace cpp_warships::game_tui {
             return hasMatch();
         };
 
+        const MatchQuery matchInPlay = [this]() -> const game_flow::Match& {
+            return match();
+        };
+
         screens_[ScreenKind::Menu] =
                 std::make_unique<MenuScreen>(intentSink, theme_, hasMatchInProgress);
+        screens_[ScreenKind::Placement] =
+                std::make_unique<PlacementScreen>(intentSink, theme_, matchInPlay);
     }
 
     Application::~Application() = default;
@@ -52,6 +60,14 @@ namespace cpp_warships::game_tui {
         return *match_;
     }
 
+    const game_flow::Match& Application::match() const {
+        if (!match_.has_value()) {
+            throw std::logic_error("Application::match called with no match in play");
+        }
+
+        return *match_;
+    }
+
     void Application::showScreen(ScreenKind screen) {
         if (screens_.contains(screen)) {
             currentScreen_ = screen;
@@ -61,6 +77,35 @@ namespace cpp_warships::game_tui {
     void Application::startNewMatch(int boardSize) {
         match_.emplace(game_core::MatchSettings::forBoardSize(boardSize), randomEngine_);
         showScreen(ScreenKind::Placement);
+    }
+
+    void Application::placeShip(
+            game_core::Coordinate origin,
+            game_core::Direction direction,
+            int length
+    ) {
+        if (match_.has_value()) {
+            match_->editablePlayerBoard()
+                    .place(origin, direction, length, match_->settings().segmentHealth());
+        }
+    }
+
+    void Application::removeShipAt(game_core::Coordinate coordinate) {
+        if (match_.has_value()) {
+            match_->editablePlayerBoard().removeShipAt(coordinate);
+        }
+    }
+
+    void Application::shuffleFleet() {
+        if (match_.has_value()) {
+            match_->shufflePlayerFleet();
+        }
+    }
+
+    void Application::beginBattle() {
+        if (match_.has_value() && match_->beginBattle()) {
+            showScreen(ScreenKind::Battle);
+        }
     }
 
     void Application::changeTheme(const std::string& themeName) {
@@ -95,10 +140,8 @@ namespace cpp_warships::game_tui {
         ftxui::ScreenInteractive screenInteractive = ftxui::ScreenInteractive::Fullscreen();
         interactiveScreen_ = &screenInteractive;
 
-        const ftxui::Component root = ftxui::CatchEvent(
-            ftxui::Renderer(renderActiveScreen),
-            routeEvent
-        );
+        const ftxui::Component root =
+                ftxui::CatchEvent(ftxui::Renderer(renderActiveScreen), routeEvent);
         screenInteractive.Loop(root);
 
         interactiveScreen_ = nullptr;

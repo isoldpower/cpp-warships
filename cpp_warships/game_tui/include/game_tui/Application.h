@@ -6,6 +6,8 @@
 #include <optional>
 #include <string>
 
+#include <game_core/Coordinate.h>
+#include <game_core/Direction.h>
 #include <game_flow/Match.h>
 #include <game_flow/RandomEngine.h>
 #include <game_tui/Intent.h>
@@ -32,9 +34,14 @@ namespace cpp_warships::game_tui {
         [[nodiscard]] ScreenKind currentScreen() const noexcept;
         [[nodiscard]] bool hasMatch() const noexcept;
         [[nodiscard]] game_flow::Match& match();
+        [[nodiscard]] const game_flow::Match& match() const;
 
         void showScreen(ScreenKind screen);
         void startNewMatch(int boardSize);
+        void placeShip(game_core::Coordinate origin, game_core::Direction direction, int length);
+        void removeShipAt(game_core::Coordinate coordinate);
+        void shuffleFleet();
+        void beginBattle();
         void changeTheme(const std::string& themeName);
         void requestQuit();
 
