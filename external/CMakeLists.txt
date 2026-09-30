@@ -1,9 +1,7 @@
 include(FetchContent)
 
-# Once a dependency is on disk, leave it alone. Without this, every reconfigure runs a
-# git update step against the network, which has failed here often enough to have wiped
-# an already-populated source tree mid-build. Pinned tags never move, so there is nothing
-# an update could usefully find.
+# Never re-fetch what is already on disk: a failed update wipes the source tree, and
+# pinned tags never move anyway.
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "" FORCE)
 
 # Include libraries on testing
@@ -32,3 +30,11 @@ FetchContent_Declare(ftxui
         GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(ftxui)
+
+
+# The browser half of the save storage, linked in as JavaScript.
+if (EMSCRIPTEN)
+    add_library(browser_save_storage_binding INTERFACE)
+    target_link_options(browser_save_storage_binding INTERFACE
+            "SHELL:--js-library ${CMAKE_CURRENT_SOURCE_DIR}/web/browser_save_storage.js")
+endif()

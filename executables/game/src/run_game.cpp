@@ -17,7 +17,7 @@
 
 namespace cpp_warships::application {
     void runGame(flow::RandomEngine& randomEngine, const ShellKind shellKind) {
-        const SaveLibrary saves = buildSaveLibrary(defaultSaveDirectory());
+        const SaveLibrary saves = buildSaveLibrary();
         const std::unique_ptr<model::WarshipsGame> game = buildGame(randomEngine, *saves.archive);
 
         model::ApplicationContext application{*game};

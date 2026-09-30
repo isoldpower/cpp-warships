@@ -1,3 +1,5 @@
+.PHONY: compile rebuild rebuild-debug rebuild-release test webassembly webassembly-preview
+
 BUILD_DIR ?= build
 SOURCE_DIR ?= .
 CPP_COMPILER ?= g++
@@ -22,3 +24,23 @@ rebuild-release:
 test:
 	if ! test -d "$(BUILD_DIR)"; then "$(MAKE)" rebuild-debug; fi
 	GTEST_COLOR=1 ctest --test-dir "$(BUILD_DIR)" --build-config "$(BUILD_TYPE)" --output-on-failure
+
+WEBASSEMBLY_BUILD_DIR ?= build-wasm
+WEBASSEMBLY_DIST_DIR ?= $(WEBASSEMBLY_BUILD_DIR)/dist
+WEBASSEMBLY_PREVIEW_PORT ?= 8000
+WEB_DIR ?= external/web
+WEB_PAGE_DIR ?= $(WEB_DIR)/page
+
+# Builds a hostable directory: the two Emscripten outputs beside a page that runs them.
+webassembly:
+	if test "$(CLEAN)" -eq "1" && test -d "$(WEBASSEMBLY_BUILD_DIR)"; then rm -rf "$(WEBASSEMBLY_BUILD_DIR)"; fi
+	emcmake cmake -B "$(WEBASSEMBLY_BUILD_DIR)" -S "$(SOURCE_DIR)" -DCMAKE_BUILD_TYPE=Release
+	cmake --build "$(WEBASSEMBLY_BUILD_DIR)" --target cpp_warships
+	mkdir -p "$(WEBASSEMBLY_DIST_DIR)"
+	cp "$(WEBASSEMBLY_BUILD_DIR)/executables/game/cpp_warships.js" \
+		"$(WEBASSEMBLY_BUILD_DIR)/executables/game/cpp_warships.wasm" \
+		"$(WEBASSEMBLY_DIST_DIR)/"
+	cp -R "$(WEB_PAGE_DIR)/." "$(WEBASSEMBLY_DIST_DIR)/"
+
+webassembly-preview: webassembly
+	python3 "$(WEB_DIR)/serve.py" "$(WEBASSEMBLY_DIST_DIR)" "$(WEBASSEMBLY_PREVIEW_PORT)"

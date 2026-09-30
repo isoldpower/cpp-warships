@@ -16,6 +16,14 @@ add_library(warships_persistence
         include/application/persistence/serializers/MatchSnapshotJsonSerializer.h src/application/persistence/serializers/MatchSnapshotJsonSerializer.cpp
 )
 
+# Local storage only exists in a browser, so only a browser build carries it.
+if (EMSCRIPTEN)
+    target_sources(warships_persistence PRIVATE
+            include/application/persistence/BrowserSaveStorage.h
+            src/application/persistence/BrowserSaveStorage.cpp)
+    target_link_libraries(warships_persistence PUBLIC browser_save_storage_binding)
+endif()
+
 # Tests setup
 if (BUILD_TESTING)
     add_executable(warships_persistence_tests
@@ -36,7 +44,7 @@ target_include_directories(warships_persistence
 
 # Link dependencies
 target_link_libraries(warships_persistence
-        # nlohmann/json appears in the serializers' public headers, so it travels with them
+        # nlohmann/json is in the serializers' public headers, so it travels with them
         PUBLIC warships_core warships_flow serialization cxx_setup nlohmann_json::nlohmann_json
         PRIVATE platform
 )

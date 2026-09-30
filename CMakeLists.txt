@@ -9,8 +9,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
-# Emit compile_commands.json so clangd and other tooling resolve include paths
-# without depending on a particular IDE's project model.
+# Emit compile_commands.json so tooling resolves include paths without an IDE.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Enable testing depending on the build type
@@ -22,8 +21,7 @@ else()
     message(STATUS "Tests are not available in Release mode")
 endif()
 
-# Shared compiler settings carrier. Libraries expose their own include roots,
-# so this target deliberately adds no include directories of its own.
+# Shared compiler settings; libraries expose their own include roots.
 add_library(cxx_setup INTERFACE)
 
 # General compiler options
@@ -35,6 +33,13 @@ endif()
 
 target_compile_features(cxx_setup
         INTERFACE cxx_std_20)
+
+# WebAssembly: FTXUI blocks waiting for keys, so the game runs off the main thread,
+# and shared memory must be on for every object in the binary, not only FTXUI's.
+if (EMSCRIPTEN)
+    string(APPEND CMAKE_CXX_FLAGS " -pthread")
+    message(STATUS "Building for WebAssembly with thread support")
+endif()
 
 # Subdirectories
 add_subdirectory(external)

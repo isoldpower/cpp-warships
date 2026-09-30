@@ -163,6 +163,28 @@ Tests are omitted entirely from Release builds, so `make test` finds nothing aft
 
 FTXUI and nlohmann/json are fetched by CMake on first configure.
 
+### In a browser
+
+The FTXUI front end also builds to WebAssembly with Emscripten, so it can run inside a
+web page on a terminal emulator such as xterm.js.
+
+| command                    | description                                                     |
+|----------------------------|-----------------------------------------------------------------|
+| `make webassembly`         | build the page and its two Emscripten outputs into `build-wasm/dist/` |
+| `make webassembly-preview` | build, then serve that directory on the first free port from `8000` |
+
+The game loop waits on keys, so it runs on a worker thread. Threads need shared memory,
+which a browser only allows on a cross-origin isolated page — one served with
+`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`.
+`external/web/serve.py` sends both; any page hosting the game has to do the same.
+
+Saves go into the browser's local storage rather than a filesystem, so they outlive the
+page. Which storage a build uses is settled when it is configured, so no code asks at
+runtime which machine it is on.
+
+Every push builds the directory and keeps it as a workflow artifact; pushing a `v*` tag
+publishes it, with checksums, as a GitHub release.
+
 
 ## A note on scope
 

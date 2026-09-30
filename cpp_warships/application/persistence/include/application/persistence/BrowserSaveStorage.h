@@ -2,21 +2,26 @@
 
 #include <application/persistence/SaveStorage.h>
 
-#include <map>
 #include <string>
 
 namespace cpp_warships::persistence {
-    /** @brief Keeps saves in memory for the lifetime of the object, for tests that want
-     * a storage with nothing behind it. */
-    class MemorySaveStorage final : public SaveStorage {
+    /** @brief Keeps saves in the browser's local storage, so they outlive the page.
+     * Every save is one entry, named for the key prefix this was built with. */
+    class BrowserSaveStorage final : public SaveStorage {
     public:
+        explicit BrowserSaveStorage(std::string keyPrefix);
+
         [[nodiscard]] std::vector<std::string> list() const override;
         [[nodiscard]] std::optional<std::string> read(const std::string& name) const override;
         bool write(const std::string& name, const std::string& contents) override;
         [[nodiscard]] bool contains(const std::string& name) const override;
         bool remove(const std::string& name) override;
 
+        [[nodiscard]] const std::string& keyPrefix() const noexcept;
+
     private:
-        std::map<std::string, std::string> savesByName_;
+        [[nodiscard]] std::string keyFor(const std::string& name) const;
+
+        std::string keyPrefix_;
     };
 }  // namespace cpp_warships::persistence

@@ -1,0 +1,47 @@
+name: WebAssembly build and release
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  web-assembly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v16
+        with:
+          version: 6.0.9
+          actions-cache-folder: emsdk-cache
+
+      - name: Build
+        working-directory: ${{ github.workspace }}
+        run: make webassembly
+
+      - name: Write checksums
+        working-directory: ${{ github.workspace }}/build-wasm/dist
+        run: find . -type f ! -name SHA256SUMS | sort | xargs sha256sum > SHA256SUMS
+
+      - name: Keep build as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp_warships-wasm
+          path: build-wasm/dist
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: build-wasm/dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
