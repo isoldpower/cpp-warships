@@ -22,8 +22,8 @@ rebuild-release:
 	$(MAKE) rebuild BUILD_TYPE=Release
 
 test:
-	if ! test -d "$(BUILD_DIR)"; then "$(MAKE)" rebuild-debug; fi
-	GTEST_COLOR=1 ctest --test-dir "$(BUILD_DIR)" --build-config "$(BUILD_TYPE)" --output-on-failure
+	if ! test -d "$(BUILD_DIR)"; then "$(MAKE)" rebuild-release; fi
+	GTEST_COLOR=1 ctest --test-dir "$(BUILD_DIR)" --build-config "$(BUILD_TYPE)" --output-on-failure --no-tests=error
 
 WEBASSEMBLY_BUILD_DIR ?= build-wasm
 WEBASSEMBLY_DIST_DIR ?= $(WEBASSEMBLY_BUILD_DIR)/dist

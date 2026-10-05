@@ -12,13 +12,14 @@ message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 # Emit compile_commands.json so tooling resolves include paths without an IDE.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Enable testing depending on the build type
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+# Tests build only in Release; WebAssembly is excluded since its binaries cannot run here
+if (CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT EMSCRIPTEN)
+    set (BUILD_TESTING ON CACHE BOOL "Enable testing" FORCE)
     include(CTest)
     message(STATUS "Including tests into final build")
 else()
     set (BUILD_TESTING OFF CACHE BOOL "Enable testing" FORCE)
-    message(STATUS "Tests are not available in Release mode")
+    message(STATUS "Tests are not available in ${CMAKE_BUILD_TYPE} mode")
 endif()
 
 # Shared compiler settings; libraries expose their own include roots.

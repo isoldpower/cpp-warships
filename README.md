@@ -156,8 +156,8 @@ also takes `CLEAN=1`.
 
 ### Build types
 
-Tests are omitted entirely from Release builds, so `make test` finds nothing after
-`make rebuild-release`.
+Tests are built only in Release, so `make test` fails with "No tests were found" after
+`make rebuild-debug`. WebAssembly builds never include tests.
 
 ### Dependencies
 
