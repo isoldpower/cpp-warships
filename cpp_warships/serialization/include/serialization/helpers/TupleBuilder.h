@@ -21,40 +21,46 @@ namespace cpp_warships::serialization::helpers {
     template <typename... TChildren>
     struct TupleBuilder {
         /** @brief Unified entrypoint to building tuple. */
-        template <typename... Args>
-        static std::tuple<TChildren...> build(Args&&... args) {
-            return build_impl(std::index_sequence_for<TChildren...>{}, std::forward<Args>(args)...);
+        template <typename... Arguments>
+        static std::tuple<TChildren...> build(Arguments&&... arguments) {
+            return buildInOrder(
+                std::index_sequence_for<TChildren...>{},
+                std::forward<Arguments>(arguments)...
+            );
         }
 
     private:
         /** @brief Helper to find the first argument of type T @tparam T The
          * type to search for in the arguments. */
-        template <typename T, typename... Args>
-        static T select_arg(Args&&... args) {
-            if constexpr (sizeof...(Args) == 0) {
+        template <typename T, typename... Arguments>
+        static T selectArgument(Arguments&&... arguments) {
+            if constexpr (sizeof...(Arguments) == 0) {
                 return T{};
             } else {
                 T* result = nullptr;
                 (
-                    [&]<typename T0>(T0&& arg) {
+                    [&]<typename T0>(T0&& argument) {
                         if constexpr (std::is_same_v<std::remove_cvref_t<T0>, T>) {
                             if (result == nullptr) {
-                                result = &arg;
+                                result = &argument;
                             }
                         }
-                    }(args),
+                    }(arguments),
                     ...);
 
                 return result == nullptr ? T{} : *result;
             }
         }
 
-        /** @brief Build tuple by applying select_arg for each type in Args. */
-        template <size_t... Is, typename... Args>
-        static std::tuple<TChildren...> build_impl(std::index_sequence<Is...>, Args&&... args) {
+        /** @brief Build tuple by applying selectArgument for each type in Arguments. */
+        template <size_t... Indices, typename... Arguments>
+        static std::tuple<TChildren...> buildInOrder(
+            std::index_sequence<Indices...>,
+            Arguments&&... arguments
+        ) {
             return std::tuple<TChildren...>(
-                select_arg<std::tuple_element_t<Is, std::tuple<TChildren...>>>(
-                    std::forward<Args>(args)...
+                selectArgument<std::tuple_element_t<Indices, std::tuple<TChildren...>>>(
+                    std::forward<Arguments>(arguments)...
                 )...
             );
         }

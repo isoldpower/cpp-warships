@@ -3,24 +3,25 @@
 #include <algorithm>
 #include <stdexcept>
 
-std::vector<std::string> StringHelper::split(const std::string& initial, char delim) {
-    std::vector<std::string> elems;
+std::vector<std::string> StringHelper::split(const std::string& text, char separator) {
+    std::vector<std::string> parts;
     std::string current;
 
-    for (int i = 0; i < static_cast<int>(initial.length()); i++) {
-        if (initial[i] == delim) {
-            elems.push_back(current);
-            current = "";
-        } else {
-            current += initial[i];
+    for (const char letter : text) {
+        if (letter != separator) {
+            current += letter;
+            continue;
         }
+
+        parts.push_back(current);
+        current.clear();
     }
 
     if (!current.empty()) {
-        elems.push_back(current);
+        parts.push_back(current);
     }
 
-    return elems;
+    return parts;
 }
 
 namespace {
@@ -55,19 +56,19 @@ std::string StringHelper::patternCoordinate(int fieldSize) {
 
 std::string StringHelper::toLower(const std::string& input) {
     std::string result = input;
-    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
+    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char letter) {
+        return static_cast<char>(std::tolower(letter));
     });
     return result;
 }
 
-std::string StringHelper::trim(const std::string& str) {
-    auto start = str.find_first_not_of(' ');
-    auto end = str.find_last_not_of(' ');
+std::string StringHelper::trim(const std::string& text) {
+    const auto start = text.find_first_not_of(' ');
+    const auto end = text.find_last_not_of(' ');
 
     if (start == std::string::npos || end == std::string::npos) {
         return "";
     }
 
-    return str.substr(start, end - start + 1);
+    return text.substr(start, end - start + 1);
 }

@@ -23,16 +23,16 @@ namespace cpp_warships::input_parser {
         return new command::ArgumentsErrorCommand(command);
     }
 
-    CommandParser::CommandParser(const model::SchemeMap<command::ParserCommand*>& scheme)
-        : model::Parser<command::ParserCommand*>(scheme) {}
+    CommandParser::CommandParser(const model::SchemeMap<command::ParserCommand*>& commandScheme)
+        : model::Parser<command::ParserCommand*>(commandScheme) {}
 
     CommandParser::CommandParser(
-        const model::SchemeMap<command::ParserCommand*>& scheme,
-        const model::ParseCallback<void>& displayError,
+        const model::SchemeMap<command::ParserCommand*>& commandScheme,
+        const model::ParseCallback<void>& errorDisplay,
         const model::SchemeHelpCallback<command::ParserCommand*>& printHelp
     )
-        : model::Parser<command::ParserCommand*>(scheme, displayError) {
-        if (!scheme.contains("help")) {
+        : model::Parser<command::ParserCommand*>(commandScheme, errorDisplay) {
+        if (!commandScheme.contains("help")) {
             builder::ConfigCommandBuilder<command::ParserCommand*> commandBuilder;
             model::ParserCommandInfo<command::ParserCommand*>* helpInfo;
 

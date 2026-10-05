@@ -43,6 +43,44 @@ namespace cpp_warships::head::plain {
 
             return lines;
         }
+
+        /** @brief Whether a ship of @p lengthInHand may lie where @p state aims it. */
+        [[nodiscard]] bool fitsWhereAimed(
+            const core::Board& board,
+            const common::state::PlacementState& state,
+            const int lengthInHand
+        ) {
+            return lengthInHand > 0 &&
+                   board.canPlace(state.cursor, state.direction, lengthInHand) ==
+                       core::PlacementError::None;
+        }
+
+        [[nodiscard]] std::string aimingLine(
+            const common::state::PlacementState& state,
+            const bool isLegal
+        ) {
+            const std::string lie =
+                state.direction == core::Direction::Horizontal ? "across" : "down";
+            return "  aiming at " + common::render::coordinateLabel(state.cursor) + ", lying " +
+                   lie + (isLegal ? "" : "   (will not fit here)");
+        }
+
+        [[nodiscard]] std::vector<PlainKey> placementKeys(const bool isFleetComplete) {
+            std::vector<PlainKey> keys{
+                {"arrows", "aim"},
+                {"enter", "lay the ship"},
+                {"back", "take it back"},
+                {"r", "turn it"},
+                {"tab", "another ship"},
+                {"f", "shuffle the fleet"},
+            };
+            if (isFleetComplete) {
+                keys.emplace_back("b", "begin the battle");
+            }
+
+            keys.emplace_back("esc", "back to the menu");
+            return keys;
+        }
     }  // namespace
 
     /** @brief The theme is offered and not taken: printed text is not dressed
@@ -55,11 +93,7 @@ namespace cpp_warships::head::plain {
         const common::state::PlacementState& state = context_.state().placement;
         const flow::PlacementPlan plan = match.playerPlacementPlan();
         const int lengthInHand = common::state::shipLengthInHand(plan, state);
-
-        const bool isLegal =
-            lengthInHand > 0 &&
-            match.playerBoard().canPlace(state.cursor, state.direction, lengthInHand) ==
-                core::PlacementError::None;
+        const bool isLegal = fitsWhereAimed(match.playerBoard(), state, lengthInHand);
 
         const PlainBoardOverlay overlay{
             .cursor = state.cursor,
@@ -67,45 +101,20 @@ namespace cpp_warships::head::plain {
             .markGlyph = isLegal ? '+' : '!'
         };
 
-        std::vector<std::string> lines{"PLACE YOUR FLEET", ""};
-
-        const std::vector<std::string> board =
-            plainBoardLines(match.playerBoard(), core::Visibility::Owner, overlay);
-        lines.insert(lines.end(), board.begin(), board.end());
-
-        lines.emplace_back("");
-        lines.push_back(plainBoardLegend());
-        lines.emplace_back("");
-
-        const std::vector<std::string> roster = rosterLines(plan, lengthInHand);
-        lines.insert(lines.end(), roster.begin(), roster.end());
-
-        const std::string lie = state.direction == core::Direction::Horizontal ? "across" : "down";
-        lines.emplace_back("");
-        lines.push_back(
-            "  aiming at " + common::render::coordinateLabel(state.cursor) + ", lying " + lie +
-            (isLegal ? "" : "   (will not fit here)")
-        );
-        lines.emplace_back("");
-
-        lines.push_back(plainKeyLine("arrows", "aim"));
-        lines.push_back(plainKeyLine("enter", "lay the ship"));
-        lines.push_back(plainKeyLine("back", "take it back"));
-        lines.push_back(plainKeyLine("r", "turn it"));
-        lines.push_back(plainKeyLine("tab", "another ship"));
-        lines.push_back(plainKeyLine("f", "shuffle the fleet"));
-
-        if (plan.isComplete()) {
-            lines.push_back(plainKeyLine("b", "begin the battle"));
-        }
-
-        lines.push_back(plainKeyLine("esc", "back to the menu"));
-        lines.emplace_back("");
-
-        for (const std::string& notice : common::render::noticesToShow(context_.application())) {
-            lines.push_back("  ! " + notice);
-        }
-
-        return common::render::frameOfLines(lines);
+        return PlainPage{}
+            .line("PLACE YOUR FLEET")
+            .blank()
+            .lines(plainBoardLines(match.playerBoard(), core::Visibility::Owner, overlay))
+            .blank()
+            .line(plainBoardLegend())
+            .blank()
+            .lines(rosterLines(plan, lengthInHand))
+            .blank()
+            .line(aimingLine(state, isLegal))
+            .blank()
+            .keys(placementKeys(plan.isComplete()))
+            .blank()
+            .notices(context_.application())
+            .frame();
     }
 }  // namespace cpp_warships::head::plain

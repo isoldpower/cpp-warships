@@ -41,6 +41,118 @@ namespace cpp_warships::application {
         return bus;
     }
 
+    namespace {
+        namespace handlers = head::common::input::handlers;
+        using model::events::EventScope;
+
+        /** @brief What every handler of one session is built from. */
+        struct SessionParts {
+            handlers::HandlerParts parts;
+            head::common::state::PresentationState& state;
+            const SessionQueries& queries;
+        };
+
+        void subscribeSessionHandlers(
+            model::events::EventRouter& router,
+            const SessionParts& session
+        ) {
+            router.subscribe(
+                EventScope::Always,
+                std::make_shared<handlers::QuitHandler>(session.parts)
+            );
+            router.subscribe(
+                EventScope::Always,
+                std::make_shared<handlers::ReturnToMenuHandler>(session.state)
+            );
+            router.subscribe(
+                EventScope::SaveNaming,
+                std::make_shared<handlers::SaveAndQuitHandler>(session.parts, session.state)
+            );
+        }
+
+        void subscribeMenuHandlers(
+            model::events::EventRouter& router,
+            const SessionParts& session
+        ) {
+            const SessionQueries& queries = session.queries;
+
+            router.subscribe(
+                EventScope::Menu,
+                std::make_shared<handlers::StartMatchHandler>(session.parts, session.state)
+            );
+            router.subscribe(
+                EventScope::Menu,
+                std::make_shared<handlers::ResumeMatchHandler>(session.state, queries.hasMatch)
+            );
+            router.subscribe(
+                EventScope::Menu,
+                std::make_shared<handlers::OpenSaveNamingHandler>(
+                    session.state,
+                    queries.hasMatch,
+                    queries.nameInPlay
+                )
+            );
+            router.subscribe(
+                EventScope::Menu,
+                std::make_shared<handlers::OpenSaveBrowserHandler>(
+                    session.state,
+                    queries.hasMatch,
+                    queries.hasSavedMatch
+                )
+            );
+        }
+
+        void subscribeSaveHandlers(
+            model::events::EventRouter& router,
+            const SessionParts& session
+        ) {
+            router.subscribe(
+                EventScope::Saves,
+                std::make_shared<handlers::LoadMatchHandler>(session.parts, session.state)
+            );
+            router.subscribe(
+                EventScope::Saves,
+                std::make_shared<handlers::DeleteSaveHandler>(session.parts, session.state)
+            );
+        }
+
+        void subscribePlacementHandlers(
+            model::events::EventRouter& router,
+            const SessionParts& session
+        ) {
+            router.subscribe(
+                EventScope::Placement,
+                std::make_shared<handlers::PlaceShipHandler>(session.parts)
+            );
+            router.subscribe(
+                EventScope::Placement,
+                std::make_shared<handlers::RemoveShipHandler>(session.parts)
+            );
+            router.subscribe(
+                EventScope::Placement,
+                std::make_shared<handlers::ShuffleFleetHandler>(session.parts)
+            );
+            router.subscribe(
+                EventScope::Placement,
+                std::make_shared<handlers::BeginBattleHandler>(session.parts, session.queries.match)
+            );
+        }
+
+        void subscribeBattleHandlers(
+            model::events::EventRouter& router,
+            const SessionParts& session
+        ) {
+            router.subscribe(
+                EventScope::Battle,
+                std::make_shared<handlers::FireHandler>(session.parts, session.queries.match)
+            );
+            router.subscribe(
+                EventScope::Battle,
+                std::make_shared<handlers::UseSkillHandler>(session.parts, session.queries.match)
+            );
+        }
+    }  // namespace
+
     std::unique_ptr<model::events::EventRouter> buildEventRouter(
         const model::intents::IntentFactory& intents,
         model::scenarios::ScenarioQueue& scenarios,
@@ -48,101 +160,17 @@ namespace cpp_warships::application {
         const SessionQueries& queries
     ) {
         auto router = std::make_unique<model::events::EventRouter>();
-        const head::common::input::handlers::HandlerParts parts{
-            .intents = intents,
-            .scenarios = scenarios
+        const SessionParts session{
+            .parts = {.intents = intents, .scenarios = scenarios},
+            .state = context.state(),
+            .queries = queries
         };
 
-        router->subscribe(
-            model::events::EventScope::Always,
-            std::make_shared<head::common::input::handlers::QuitHandler>(parts)
-        );
-        router->subscribe(
-            model::events::EventScope::Always,
-            std::make_shared<head::common::input::handlers::ReturnToMenuHandler>(context.state())
-        );
-
-        router->subscribe(
-            model::events::EventScope::SaveNaming,
-            std::make_shared<head::common::input::handlers::SaveAndQuitHandler>(
-                parts,
-                context.state()
-            )
-        );
-
-        router->subscribe(
-            model::events::EventScope::Menu,
-            std::make_shared<head::common::input::handlers::StartMatchHandler>(
-                parts,
-                context.state()
-            )
-        );
-        router->subscribe(
-            model::events::EventScope::Menu,
-            std::make_shared<head::common::input::handlers::ResumeMatchHandler>(
-                context.state(),
-                queries.hasMatch
-            )
-        );
-        router->subscribe(
-            model::events::EventScope::Menu,
-            std::make_shared<head::common::input::handlers::OpenSaveNamingHandler>(
-                context.state(),
-                queries.hasMatch,
-                queries.nameInPlay
-            )
-        );
-        router->subscribe(
-            model::events::EventScope::Menu,
-            std::make_shared<head::common::input::handlers::OpenSaveBrowserHandler>(
-                context.state(),
-                queries.hasMatch,
-                queries.hasSavedMatch
-            )
-        );
-        router->subscribe(
-            model::events::EventScope::Saves,
-            std::make_shared<head::common::input::handlers::LoadMatchHandler>(
-                parts,
-                context.state()
-            )
-        );
-        router->subscribe(
-            model::events::EventScope::Saves,
-            std::make_shared<head::common::input::handlers::DeleteSaveHandler>(
-                parts,
-                context.state()
-            )
-        );
-
-        router->subscribe(
-            model::events::EventScope::Placement,
-            std::make_shared<head::common::input::handlers::PlaceShipHandler>(parts)
-        );
-        router->subscribe(
-            model::events::EventScope::Placement,
-            std::make_shared<head::common::input::handlers::RemoveShipHandler>(parts)
-        );
-        router->subscribe(
-            model::events::EventScope::Placement,
-            std::make_shared<head::common::input::handlers::ShuffleFleetHandler>(parts)
-        );
-        router->subscribe(
-            model::events::EventScope::Placement,
-            std::make_shared<head::common::input::handlers::BeginBattleHandler>(
-                parts,
-                queries.match
-            )
-        );
-
-        router->subscribe(
-            model::events::EventScope::Battle,
-            std::make_shared<head::common::input::handlers::FireHandler>(parts, queries.match)
-        );
-        router->subscribe(
-            model::events::EventScope::Battle,
-            std::make_shared<head::common::input::handlers::UseSkillHandler>(parts, queries.match)
-        );
+        subscribeSessionHandlers(*router, session);
+        subscribeMenuHandlers(*router, session);
+        subscribeSaveHandlers(*router, session);
+        subscribePlacementHandlers(*router, session);
+        subscribeBattleHandlers(*router, session);
 
         return router;
     }

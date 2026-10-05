@@ -13,8 +13,8 @@ namespace cpp_warships::serialization::helpers::type_converters {
         static int stringToInt(const std::string& data) {
             try {
                 return std::stoi(data);
-            } catch (const std::exception& e) {
-                std::cerr << e.what() << std::endl;
+            } catch (const std::exception& error) {
+                std::cerr << error.what() << std::endl;
                 throw std::runtime_error("Failed to convert string to int");
             }
         }
@@ -23,8 +23,8 @@ namespace cpp_warships::serialization::helpers::type_converters {
         static float stringToFloat(const std::string& data) {
             try {
                 return std::stof(data);
-            } catch (const std::exception& e) {
-                std::cerr << e.what() << std::endl;
+            } catch (const std::exception& error) {
+                std::cerr << error.what() << std::endl;
                 throw std::runtime_error("Failed to convert string to float");
             }
         }

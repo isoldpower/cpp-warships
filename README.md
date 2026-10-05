@@ -33,7 +33,7 @@ presentation genuinely apart.
 
 ### The layers
 
-Four layers, each its own CMake target, each reaching only inwards.
+Six game targets and two support libraries, each reaching only inwards.
 
 ```mermaid
 flowchart TB
@@ -44,13 +44,24 @@ flowchart TB
     flow["warships_flow<br/>match orchestration"]
     core["warships_core<br/>board rules · error root"]
 
+    serialization["serialization<br/>generic serializers"]
+    platform["platform<br/>everything that differs by host"]
+
     tui --> head
+    tui --> platform
     head --> model
     model --> persistence
     model --> flow
     persistence --> flow
+    persistence --> serialization
+    persistence --> platform
     flow --> core
 ```
+
+`serialization` and `platform` sit outside the game: they know nothing about warships, and
+the game reaches them, never the other way round. `utilities`, `input_parser` and `input_reader` are
+older general-purpose libraries kept for the console demos under `executables/showcases`,
+built in Debug only; the game does not link them.
 
 `warships_head` links **without any drawing library**. The plain front end lives in that
 target on purpose, so leaking an FTXUI include into shared code breaks the build rather

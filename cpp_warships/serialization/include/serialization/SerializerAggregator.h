@@ -90,9 +90,9 @@ namespace cpp_warships::serialization {
                         serializer->setChildrenSerializers(serializers...);
                     }(serializers),
                     ...);
-            } catch (const std::exception& e) {
+            } catch (const std::exception& error) {
                 availableSerializers.clear();
-                std::cerr << e.what() << '\n';
+                std::cerr << error.what() << '\n';
             }
         }
 

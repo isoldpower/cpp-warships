@@ -29,45 +29,48 @@ namespace cpp_warships::head::tui {
             return boardWidth * BOARD_COLUMN_PITCH - BOARD_TILE_GAP;
         }
 
-        /** @brief The colours a cell is painted in, with the overlay having its
-         * say first. */
+        /** @brief Everything a board is drawn from: the board, how much of it may be seen, the
+         * theme it is painted in and what lies on top of it. */
+        struct BoardDrawing {
+            const core::Board& board;
+            core::Visibility visibility;
+            const common::Theme& theme;
+            const BoardOverlay& overlay;
+        };
+
+        /** @brief The colours a cell is painted in, with the overlay having its say first. */
         common::CellColors colorsOf(
-            const core::Board& board,
-            core::Coordinate coordinate,
-            core::Visibility visibility,
-            const common::Theme& theme,
-            const BoardOverlay& overlay
+            const BoardDrawing& drawing,
+            const core::Coordinate coordinate
         ) {
-            if (overlay.marked.contains(coordinate)) {
-                return overlay.markColors;
+            if (drawing.overlay.marked.contains(coordinate)) {
+                return drawing.overlay.markColors;
             }
-            if (overlay.cursor == coordinate) {
-                return theme.cursor;
+            if (drawing.overlay.cursor == coordinate) {
+                return drawing.theme.cursor;
             }
 
-            return appearanceOf(board.stateAt(coordinate, visibility), theme).colors;
+            const core::CellState state = drawing.board.stateAt(coordinate, drawing.visibility);
+            return appearanceOf(state, drawing.theme).colors;
         }
 
-        std::string glyphOf(
-            const core::Board& board,
-            core::Coordinate coordinate,
-            core::Visibility visibility,
-            const common::Theme& theme,
-            const BoardOverlay& overlay
-        ) {
-            if (overlay.marked.contains(coordinate)) {
+        /** @brief What a cell shows: the hit points left on a struck ship still afloat, and
+         * otherwise the glyph of what is known to be there. */
+        std::string glyphOf(const BoardDrawing& drawing, const core::Coordinate coordinate) {
+            if (drawing.overlay.marked.contains(coordinate)) {
                 return " ";
             }
 
-            const core::CellState state = board.stateAt(coordinate, visibility);
-            const std::optional<int> health = board.healthAt(coordinate, visibility);
+            const core::CellState state = drawing.board.stateAt(coordinate, drawing.visibility);
+            const std::optional<int> health =
+                drawing.board.healthAt(coordinate, drawing.visibility);
             const bool isHitAfloat =
                 state == core::CellState::Damaged || state == core::CellState::Destroyed;
             if (isHitAfloat && health.has_value()) {
                 return std::to_string(*health);
             }
 
-            return appearanceOf(state, theme).glyph;
+            return appearanceOf(state, drawing.theme).glyph;
         }
 
         ftxui::Element tileElement(const std::string& glyph, const common::CellColors& colors) {
@@ -77,6 +80,65 @@ namespace cpp_warships::head::tui {
         ftxui::Element spacer(int width, const common::Theme& theme) {
             return ftxui::text(std::string(static_cast<std::size_t>(width), ' ')) |
                    bgcolor(theme.background);
+        }
+
+        /** @brief The letters over the columns, each centred over its tile. */
+        ftxui::Element columnHeaders(const int boardWidth, const common::Theme& theme) {
+            std::vector<ftxui::Element> headers{ftxui::text(std::string(ROW_LABEL_WIDTH, ' '))};
+            for (int column = 0; column < boardWidth; ++column) {
+                const bool isLast = column + 1 == boardWidth;
+                const auto trailing =
+                    static_cast<std::size_t>(isLast ? 0 : BOARD_COLUMN_PITCH - BOARD_TILE_WIDTH);
+                const std::string label =
+                    centredInTile(common::render::columnLabel(column)) + std::string(trailing, ' ');
+                headers.push_back(ftxui::text(label) | color(theme.textMuted));
+            }
+
+            return ftxui::hbox(std::move(headers));
+        }
+
+        /** @brief The numbers down the side, with a blank line beside each gap between rows. */
+        ftxui::Element rowHeaders(const int boardHeight, const common::Theme& theme) {
+            std::vector<ftxui::Element> headers;
+            for (int row = 0; row < boardHeight; ++row) {
+                headers.push_back(ftxui::text(rowLabel(row)) | color(theme.textMuted));
+                if (row + 1 < boardHeight) {
+                    headers.push_back(ftxui::text(std::string(ROW_LABEL_WIDTH, ' ')));
+                }
+            }
+
+            return ftxui::vbox(std::move(headers));
+        }
+
+        /** @brief One row of tiles, with a gap after every tile but the last. */
+        ftxui::Element tileRow(const BoardDrawing& drawing, const int row) {
+            const int boardWidth = drawing.board.width();
+            std::vector<ftxui::Element> cells;
+            for (int column = 0; column < boardWidth; ++column) {
+                const core::Coordinate coordinate{column, row};
+                cells.push_back(
+                    tileElement(glyphOf(drawing, coordinate), colorsOf(drawing, coordinate))
+                );
+                if (column + 1 < boardWidth) {
+                    cells.push_back(spacer(BOARD_TILE_GAP, drawing.theme));
+                }
+            }
+
+            return ftxui::hbox(std::move(cells));
+        }
+
+        /** @brief Every row of tiles, with a blank row between each two. */
+        ftxui::Element tileRows(const BoardDrawing& drawing) {
+            const int boardHeight = drawing.board.height();
+            std::vector<ftxui::Element> rows;
+            for (int row = 0; row < boardHeight; ++row) {
+                rows.push_back(tileRow(drawing, row));
+                if (row + 1 < boardHeight) {
+                    rows.push_back(spacer(gridWidthOf(drawing.board.width()), drawing.theme));
+                }
+            }
+
+            return ftxui::vbox(std::move(rows));
         }
     }  // namespace
 
@@ -95,55 +157,17 @@ namespace cpp_warships::head::tui {
     ) {
         boardWidth_ = board.width();
         boardHeight_ = board.height();
-
-        std::vector<ftxui::Element> columnHeaders;
-        std::vector<ftxui::Element> rowHeaders;
-        std::vector<ftxui::Element> gridRows;
-
-        for (int column = 0; column < boardWidth_; ++column) {
-            const bool isLast = column + 1 == boardWidth_;
-            const auto trailing =
-                static_cast<std::size_t>(isLast ? 0 : BOARD_COLUMN_PITCH - BOARD_TILE_WIDTH);
-            columnHeaders.push_back(
-                ftxui::text(
-                    centredInTile(common::render::columnLabel(column)) + std::string(trailing, ' ')
-                ) |
-                color(theme.textMuted)
-            );
-        }
-
-        for (int row = 0; row < boardHeight_; ++row) {
-            std::vector<ftxui::Element> cells;
-
-            for (int column = 0; column < boardWidth_; ++column) {
-                const core::Coordinate coordinate{column, row};
-                cells.push_back(tileElement(
-                    glyphOf(board, coordinate, visibility, theme, overlay),
-                    colorsOf(board, coordinate, visibility, theme, overlay)
-                ));
-
-                if (column + 1 < boardWidth_) {
-                    cells.push_back(spacer(BOARD_TILE_GAP, theme));
-                }
-            }
-
-            rowHeaders.push_back(ftxui::text(rowLabel(row)) | color(theme.textMuted));
-            gridRows.push_back(ftxui::hbox(std::move(cells)));
-
-            if (row + 1 < boardHeight_) {
-                rowHeaders.push_back(ftxui::text(std::string(ROW_LABEL_WIDTH, ' ')));
-                gridRows.push_back(spacer(gridWidthOf(boardWidth_), theme));
-            }
-        }
+        const BoardDrawing drawing{
+            .board = board,
+            .visibility = visibility,
+            .theme = theme,
+            .overlay = overlay
+        };
 
         return ftxui::vbox(
-            {ftxui::hbox(
-                 {ftxui::text(std::string(ROW_LABEL_WIDTH, ' ')),
-                  ftxui::hbox(std::move(columnHeaders))}
-             ),
+            {columnHeaders(boardWidth_, theme),
              ftxui::hbox(
-                 {ftxui::vbox(std::move(rowHeaders)),
-                  ftxui::vbox(std::move(gridRows)) | reflectWholeBox(gridBox_)}
+                 {rowHeaders(boardHeight_, theme), tileRows(drawing) | reflectWholeBox(gridBox_)}
              )}
         );
     }

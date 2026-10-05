@@ -173,6 +173,16 @@ namespace cpp_warships::persistence::serializers {
 
             return journal;
         }
+
+        /** @brief The banked skills a save lists by name, in the order they will be spent. */
+        std::deque<flow::SkillKind> skillsFromJson(const nlohmann::json& names) {
+            std::deque<flow::SkillKind> skills;
+            for (const nlohmann::json& name : names) {
+                skills.push_back(valueForName(NAME_BY_SKILL, name.get<std::string>(), "SkillKind"));
+            }
+
+            return skills;
+        }
     }  // namespace
 
     bool MatchSnapshotJsonSerializer::isRelated(nlohmann::json item) {
@@ -218,13 +228,6 @@ namespace cpp_warships::persistence::serializers {
         BoardJsonSerializer boardSerializer = std::get<0>(childrenSerializers);
         MatchSettingsJsonSerializer settingsSerializer = std::get<1>(childrenSerializers);
 
-        std::deque<flow::SkillKind> bankedSkills;
-        for (const nlohmann::json& skill : item["bankedSkills"]) {
-            bankedSkills.push_back(
-                valueForName(NAME_BY_SKILL, skill.get<std::string>(), "SkillKind")
-            );
-        }
-
         const flow::MatchPhase phase =
             valueForName(NAME_BY_PHASE, item["phase"].get<std::string>(), "MatchPhase");
         const flow::Participant currentTurn = valueForName(
@@ -237,7 +240,7 @@ namespace cpp_warships::persistence::serializers {
             settingsSerializer.deserialize(item["settings"]),
             boardSerializer.deserialize(item["playerBoard"]),
             boardSerializer.deserialize(item["computerBoard"]),
-            std::move(bankedSkills),
+            skillsFromJson(item["bankedSkills"]),
             item["roundNumber"].get<int>(),
             phase,
             currentTurn,

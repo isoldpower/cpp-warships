@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <regex>
 #include <string>
 #include <utility>
@@ -34,13 +35,7 @@ namespace cpp_warships::input_parser::model {
         }
 
         [[nodiscard]] bool getIsFlagPresent(const std::string& flag) const {
-            for (int i = 0; i < static_cast<int>(this->flags.size()); i++) {
-                if (this->flags[i] == flag) {
-                    return true;
-                }
-            }
-
-            return false;
+            return std::find(this->flags.begin(), this->flags.end(), flag) != this->flags.end();
         }
 
         [[nodiscard]] std::vector<std::string> getFlags() const {

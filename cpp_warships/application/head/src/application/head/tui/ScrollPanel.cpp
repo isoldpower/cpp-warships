@@ -119,44 +119,18 @@ namespace cpp_warships::head::tui {
             void SetBox(ftxui::Box box) override {
                 ftxui::Node::SetBox(box);
 
-                const int width = std::max(0, box.x_max - box.x_min + 1);
-                const int height = std::max(0, box.y_max - box.y_min + 1);
-
-                isOverflowingDown_ = contentHeight_ > height;
-                isOverflowingAcross_ = contentWidth_ > width - (isOverflowingDown_ ? 1 : 0);
-                if (!isOverflowingDown_ && isOverflowingAcross_) {
-                    isOverflowingDown_ = contentHeight_ > height - 1;
-                }
-
-                const int windowWidth = std::max(0, width - (isOverflowingDown_ ? 1 : 0));
-                const int windowHeight = std::max(0, height - (isOverflowingAcross_ ? 1 : 0));
-                const int offsetX =
-                    std::clamp(wanted_.x, 0, std::max(0, contentWidth_ - windowWidth));
-                const int offsetY =
-                    std::clamp(wanted_.y, 0, std::max(0, contentHeight_ - windowHeight));
-
-                window_ = ftxui::Box{
-                    .x_min = box.x_min,
-                    .x_max = box.x_min + windowWidth - 1,
-                    .y_min = box.y_min,
-                    .y_max = box.y_min + windowHeight - 1
-                };
-
-                const ftxui::Box contentBox{
-                    .x_min = box.x_min - offsetX,
-                    .x_max = box.x_min - offsetX + std::max(contentWidth_, windowWidth) - 1,
-                    .y_min = box.y_min - offsetY,
-                    .y_max = box.y_min - offsetY + std::max(contentHeight_, windowHeight) - 1
-                };
-                children_[0]->SetBox(contentBox);
+                decideOverflow(box);
+                window_ = windowWithin(box);
+                const common::state::ScrollOffset offset = clampedOffset();
+                children_[0]->SetBox(contentBoxAt(offset));
 
                 layout_ = ScrollLayout{
                     .isLaidOut = true,
                     .window = window_,
                     .contentWidth = contentWidth_,
                     .contentHeight = contentHeight_,
-                    .offsetX = offsetX,
-                    .offsetY = offsetY
+                    .offsetX = offset.x,
+                    .offsetY = offset.y
                 };
             }
 
@@ -175,6 +149,62 @@ namespace cpp_warships::head::tui {
             }
 
         private:
+            [[nodiscard]] static int widthOf(const ftxui::Box& box) {
+                return std::max(0, box.x_max - box.x_min + 1);
+            }
+
+            [[nodiscard]] static int heightOf(const ftxui::Box& box) {
+                return std::max(0, box.y_max - box.y_min + 1);
+            }
+
+            /** @brief Which edges need a bar, knowing that a bar down one side takes a column
+             * the content might have needed, and a bar along the bottom takes a line. */
+            void decideOverflow(const ftxui::Box& box) {
+                const int width = widthOf(box);
+                const int height = heightOf(box);
+
+                isOverflowingDown_ = contentHeight_ > height;
+                isOverflowingAcross_ = contentWidth_ > width - (isOverflowingDown_ ? 1 : 0);
+                isOverflowingDown_ =
+                    isOverflowingDown_ || (isOverflowingAcross_ && contentHeight_ > height - 1);
+            }
+
+            /** @brief The part of @p box the content shows through, the bars left out. */
+            [[nodiscard]] ftxui::Box windowWithin(const ftxui::Box& box) const {
+                const int windowWidth = std::max(0, widthOf(box) - (isOverflowingDown_ ? 1 : 0));
+                const int windowHeight =
+                    std::max(0, heightOf(box) - (isOverflowingAcross_ ? 1 : 0));
+
+                return ftxui::Box{
+                    .x_min = box.x_min,
+                    .x_max = box.x_min + windowWidth - 1,
+                    .y_min = box.y_min,
+                    .y_max = box.y_min + windowHeight - 1
+                };
+            }
+
+            /** @brief The wanted scroll, held back so the window never runs past the content. */
+            [[nodiscard]] common::state::ScrollOffset clampedOffset() const {
+                return {
+                    .x = std::clamp(wanted_.x, 0, std::max(0, contentWidth_ - widthOf(window_))),
+                    .y = std::clamp(wanted_.y, 0, std::max(0, contentHeight_ - heightOf(window_)))
+                };
+            }
+
+            /** @brief Where the content lies at full size, slid back by @p offset behind the
+             * window. */
+            [[nodiscard]] ftxui::Box contentBoxAt(const common::state::ScrollOffset offset) const {
+                const int left = window_.x_min - offset.x;
+                const int top = window_.y_min - offset.y;
+
+                return ftxui::Box{
+                    .x_min = left,
+                    .x_max = left + std::max(contentWidth_, widthOf(window_)) - 1,
+                    .y_min = top,
+                    .y_max = top + std::max(contentHeight_, heightOf(window_)) - 1
+                };
+            }
+
             void paintBarDown(ftxui::Screen& screen) const {
                 const int column = window_.x_max + 1;
                 const int length = window_.y_max - window_.y_min + 1;

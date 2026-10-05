@@ -27,15 +27,16 @@ public:
         return [method, instance](TOptions options) { return (instance->*method)(options); };
     }
 
-    template <typename TClass, typename TReturn, typename... TArgs>
-    static std::function<TReturn(TArgs...)> methodToFunction(
-        TReturn (TClass::*method)(TArgs...),
+    template <typename TClass, typename TReturn, typename... TArguments>
+    static std::function<TReturn(TArguments...)> methodToFunction(
+        TReturn (TClass::*method)(TArguments...),
         TClass* instance
     ) {
-        return
-            [method, instance](TArgs... args) -> TReturn { return (instance->*method)(args...); };
+        return [method, instance](TArguments... arguments) -> TReturn {
+            return (instance->*method)(arguments...);
+        };
     }
 
-    static std::pair<int, int> cell(const std::string& coord);
+    static std::pair<int, int> cell(const std::string& coordinate);
     static std::pair<int, int> convertToPair(const std::string& input);
 };

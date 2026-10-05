@@ -33,6 +33,12 @@ namespace cpp_warships::head::tui {
         void publishLayout() override;
 
     private:
+        [[nodiscard]] ftxui::Element renderOwnWaters();
+        [[nodiscard]] ftxui::Element renderEnemyWaters();
+        [[nodiscard]] ftxui::Element renderSkills();
+        [[nodiscard]] ftxui::Element renderShortcuts();
+        [[nodiscard]] ftxui::Element renderStory();
+
         const common::PresentationContext& context_;
         common::input::GridGeometry& geometry_;
         BoardView ownWatersView_;

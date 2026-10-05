@@ -17,29 +17,29 @@ namespace cpp_warships::input_parser {
             if (commandPrint) {
                 commandPrint(options);
             } else {
-                DefaultHelp::PrintCommand<void>(command, DefaultHelp::PrintParam);
+                DefaultHelp::PrintCommand<void>(command, DefaultHelp::PrintParameter);
                 ViewHelper::consoleOut("");
             }
         }
     }
 
-    VoidParser::VoidParser(const model::SchemeMap<void>& scheme)
-        : VoidParser(scheme, nullptr, nullptr) {}
+    VoidParser::VoidParser(const model::SchemeMap<void>& commandScheme)
+        : VoidParser(commandScheme, nullptr, nullptr) {}
 
     VoidParser::VoidParser(
-        const model::SchemeMap<void>& scheme,
-        const model::ParseCallback<void>& displayError,
+        const model::SchemeMap<void>& commandScheme,
+        const model::ParseCallback<void>& errorDisplay,
         const model::SchemeHelpCallback<void>& printHelp
     )
-        : model::Parser<void>(scheme, displayError, printHelp) {
-        if (scheme.find("help") == scheme.end()) {
+        : model::Parser<void>(commandScheme, errorDisplay, printHelp) {
+        if (commandScheme.find("help") == commandScheme.end()) {
             builder::ConfigCommandBuilder<void> commandBuilder;
             model::ParserCommandInfo<void>* helpInfo;
 
             if (printHelp) {
                 helpInfo = new model::ParserCommandInfo<void>(
                     {commandBuilder.setDescription("command::Command to display this message")
-                         .setCallback(std::bind(printHelp, scheme))
+                         .setCallback(std::bind(printHelp, commandScheme))
                          .buildAndReset()}
                 );
             } else {

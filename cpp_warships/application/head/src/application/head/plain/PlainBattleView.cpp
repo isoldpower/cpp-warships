@@ -59,6 +59,33 @@ namespace cpp_warships::head::plain {
 
             return lines;
         }
+
+        [[nodiscard]] std::string standingOf(const flow::Match& match) {
+            if (match.phase() == flow::MatchPhase::Finished) {
+                return "YOUR FLEET IS GONE";
+            }
+
+            return match.isPlayerTurn() ? "your turn" : "the enemy's turn";
+        }
+
+        [[nodiscard]] std::string battleTitle(const flow::Match& match) {
+            return "BATTLE   round " + std::to_string(match.roundNumber()) + "   " +
+                   standingOf(match);
+        }
+
+        [[nodiscard]] std::vector<PlainKey> battleKeys(const bool isFinished) {
+            if (isFinished) {
+                return {{"esc", "back to the menu"}};
+            }
+
+            return {
+                {"arrows", "take aim"},
+                {"enter", "fire"},
+                {"k", "use the next skill"},
+                {"pgup", "further back through the log"},
+                {"esc", "back to the menu"},
+            };
+        }
     }  // namespace
 
     PlainBattleView::PlainBattleView(const common::PresentationContext& context) noexcept
@@ -66,59 +93,33 @@ namespace cpp_warships::head::plain {
 
     common::render::Frame PlainBattleView::render(int, int) {
         const flow::Match& match = context_.game().match();
-        const model::BattleJournal& journal = context_.game().journal();
         const common::state::BattleState& state = context_.state().battle;
         const bool isFinished = match.phase() == flow::MatchPhase::Finished;
-        const std::string turn = isFinished             ? "YOUR FLEET IS GONE"
-                                 : match.isPlayerTurn() ? "your turn"
-                                                        : "the enemy's turn";
 
-        std::vector<std::string> lines{
-            "BATTLE   round " + std::to_string(match.roundNumber()) + "   " + turn,
-            "",
-            "YOUR WATERS"
-        };
-
-        const std::vector<std::string> ownWaters =
-            plainBoardLines(match.playerBoard(), core::Visibility::Owner, {});
-        lines.insert(lines.end(), ownWaters.begin(), ownWaters.end());
-
-        lines.emplace_back("");
-        lines.emplace_back("ENEMY WATERS");
-
-        const PlainBoardOverlay aim{.cursor = state.target};
-        const std::vector<std::string> enemyWaters =
-            plainBoardLines(match.computerBoard(), core::Visibility::Opponent, aim);
-        lines.insert(lines.end(), enemyWaters.begin(), enemyWaters.end());
-
-        lines.emplace_back("");
-        lines.push_back(plainBoardLegend());
-        lines.emplace_back("");
-        lines.push_back("  aiming at " + common::render::coordinateLabel(state.target));
-        lines.emplace_back("");
-        lines.push_back(skillBankLine(match));
-        lines.emplace_back("");
-
-        const std::vector<std::string> log =
-            journalLines(journal, context_.theme(), state.logScroll);
-        lines.insert(lines.end(), log.begin(), log.end());
-
-        lines.emplace_back("");
-
-        if (!isFinished) {
-            lines.push_back(plainKeyLine("arrows", "take aim"));
-            lines.push_back(plainKeyLine("enter", "fire"));
-            lines.push_back(plainKeyLine("k", "use the next skill"));
-            lines.push_back(plainKeyLine("pgup", "further back through the log"));
-        }
-
-        lines.push_back(plainKeyLine("esc", "back to the menu"));
-        lines.emplace_back("");
-
-        for (const std::string& notice : common::render::noticesToShow(context_.application())) {
-            lines.push_back("  ! " + notice);
-        }
-
-        return common::render::frameOfLines(lines);
+        return PlainPage{}
+            .line(battleTitle(match))
+            .blank()
+            .line("YOUR WATERS")
+            .lines(plainBoardLines(match.playerBoard(), core::Visibility::Owner, {}))
+            .blank()
+            .line("ENEMY WATERS")
+            .lines(plainBoardLines(
+                match.computerBoard(),
+                core::Visibility::Opponent,
+                PlainBoardOverlay{.cursor = state.target}
+            ))
+            .blank()
+            .line(plainBoardLegend())
+            .blank()
+            .line("  aiming at " + common::render::coordinateLabel(state.target))
+            .blank()
+            .line(skillBankLine(match))
+            .blank()
+            .lines(journalLines(context_.game().journal(), context_.theme(), state.logScroll))
+            .blank()
+            .keys(battleKeys(isFinished))
+            .blank()
+            .notices(context_.application())
+            .frame();
     }
 }  // namespace cpp_warships::head::plain

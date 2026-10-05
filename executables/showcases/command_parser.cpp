@@ -1,8 +1,8 @@
 #include <input_parser/CommandParser.h>
 #include <input_parser/VoidParser.h>
-#include <input_parser/builder/ConfigCommandBuilder.h>
-#include <input_parser/builder/DefaultParameterBuilder.h>
 #include <utilities/ViewHelper.h>
+
+#include "DemoScheme.h"
 
 using namespace cpp_warships::input_parser;
 using namespace cpp_warships::input_parser::builder;
@@ -78,82 +78,14 @@ public:
 };
 
 int main() {
-    ConfigCommandBuilder<ParserCommand*> commandBuilder;
-    DefaultParameterBuilder parameterBuilder;
     ParserCommandsHandler handler;
-
-    SchemeMap<ParserCommand*> inputScheme = {
-        {"load",
-         ParserCommandInfo(
-             commandBuilder
-                 .setCallback(
-                     TypesHelper::methodToFunction(&ParserCommandsHandler::handleLoad, &handler)
-                 )
-                 .setDescription("Load game from file")
-                 .addParameter(parameterBuilder.addFlag("--filename")
-                                   .setDescription(
-                                       "Specify the file name to load the game "
-                                       "from. Make sure it's a .json file"
-                                   )
-                                   .setValidator(std::regex("^.*\\.json$"))
-                                   .setNecessary(true)
-                                   .buildAndReset())
-                 .buildAndReset()
-         )},
-        {"new",
-         ParserCommandInfo(
-             commandBuilder
-                 .setCallback(
-                     TypesHelper::methodToFunction(&ParserCommandsHandler::handleNew, &handler)
-                 )
-                 .setDescription("Start new game from scratch")
-                 .addParameter(parameterBuilder.addFlag("--default")
-                                   .setDescription(
-                                       "Start game with default settings and skip "
-                                       "the initialization phase (true/false"
-                                   )
-                                   .setNecessary(false)
-                                   .setValidator(std::regex("^(true|false)$"))
-                                   .buildAndReset())
-                 .buildAndReset()
-         )},
-        {"info",
-         ParserCommandInfo(
-             commandBuilder
-                 .setCallback(
-                     TypesHelper::methodToFunction(&ParserCommandsHandler::handleInfo, &handler)
-                 )
-                 .setDescription("Print the latest screenshot from currently handled save")
-                 .buildAndReset()
-         )},
-        {"list",
-         ParserCommandInfo(
-             commandBuilder
-                 .setCallback(
-                     TypesHelper::methodToFunction(&ParserCommandsHandler::handleList, &handler)
-                 )
-                 .setDescription("List all available saves")
-                 .addParameter(parameterBuilder.addFlag("--filename")
-                                   .setNecessary(false)
-                                   .setDescription("Specify path to the directory with saves")
-                                   .setValidator(std::regex("^.*$"))
-                                   .buildAndReset())
-                 .buildAndReset()
-         )},
-        {"exit",
-         ParserCommandInfo(
-             commandBuilder
-                 .setCallback(
-                     TypesHelper::methodToFunction(&ParserCommandsHandler::handleExit, &handler)
-                 )
-                 .setDescription("Exit the program")
-                 .buildAndReset()
-         )}
+    const auto displayError = [&handler](const ParsedOptions& options) {
+        handler.displayError(options);
     };
-
-    auto errorHandler =
-        TypesHelper::methodToFunction(&ParserCommandsHandler::displayError, &handler);
-    CommandParser parser(inputScheme, errorHandler);
+    CommandParser parser(
+        cpp_warships::showcases::demoScheme<ParserCommand*>(handler),
+        displayError
+    );
 
     while (!handler.getExited()) {
         std::cout << "Enter new command (help for list of commands): ";

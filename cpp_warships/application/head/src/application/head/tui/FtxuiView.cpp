@@ -133,6 +133,21 @@ namespace cpp_warships::head::tui {
         };
     }
 
+    ftxui::Element screenFrame(
+        const common::Theme& theme,
+        ftxui::Element header,
+        ftxui::Element body,
+        ftxui::Element notices
+    ) {
+        return ftxui::vbox(
+                   {std::move(header),
+                    ftxui::separator() | color(theme.border),
+                    std::move(body) | ftxui::flex,
+                    std::move(notices)}
+               ) |
+               ftxui::border | color(theme.border) | bgcolor(theme.background) | ftxui::flex;
+    }
+
     ftxui::Element dialogFrame(
         const common::Theme& theme,
         ftxui::Element body,
@@ -185,8 +200,12 @@ namespace cpp_warships::head::tui {
 
     void FtxuiRenderer::publishLayout() {}
 
-    bool FtxuiRenderer::isLaptop() const noexcept {
-        return !isNarrow() && availableWidth_ < LAPTOP_LAYOUT_COLUMNS;
+    LayoutTier FtxuiRenderer::layoutTier() const noexcept {
+        if (availableWidth_ < NARROW_LAYOUT_COLUMNS) {
+            return LayoutTier::Narrow;
+        }
+
+        return availableWidth_ < LAPTOP_LAYOUT_COLUMNS ? LayoutTier::Laptop : LayoutTier::Wide;
     }
 
     int FtxuiRenderer::availableWidth() const noexcept {
@@ -194,6 +213,6 @@ namespace cpp_warships::head::tui {
     }
 
     bool FtxuiRenderer::isNarrow() const noexcept {
-        return availableWidth_ < NARROW_LAYOUT_COLUMNS;
+        return layoutTier() == LayoutTier::Narrow;
     }
 }  // namespace cpp_warships::head::tui

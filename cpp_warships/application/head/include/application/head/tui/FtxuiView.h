@@ -20,6 +20,22 @@ namespace cpp_warships::head::tui {
      * has to ask. */
     [[nodiscard]] common::input::Keystroke keystrokeOf(ftxui::Event event);
 
+    /** @brief How much room a screen has to lay its panels out in: a phone's single column,
+     *  a laptop's boards with a strip under them, or a wide screen with a side bar. */
+    enum class LayoutTier {
+        Narrow,
+        Laptop,
+        Wide,
+    };
+
+    /** @brief A screen's @p header over its @p body, with @p notices under it, all boxed. */
+    [[nodiscard]] ftxui::Element screenFrame(
+        const common::Theme& theme,
+        ftxui::Element header,
+        ftxui::Element body,
+        ftxui::Element notices
+    );
+
     /** @brief @p body boxed as a dialog: held at least @p minimumWidth wide in the middle of
      *  the screen, or spread across all of it when the screen @p isNarrow. */
     [[nodiscard]] ftxui::Element dialogFrame(
@@ -48,9 +64,8 @@ namespace cpp_warships::head::tui {
         /** @brief Whether the room offered is too narrow for panels to stand side by side. */
         [[nodiscard]] bool isNarrow() const noexcept;
 
-        /** @brief Whether the room offered is laptop-sized: wide enough for panels side by
-         * side, too narrow to spare a side bar beside them. */
-        [[nodiscard]] bool isLaptop() const noexcept;
+        /** @brief Which layout the room offered calls for. */
+        [[nodiscard]] LayoutTier layoutTier() const noexcept;
 
         /** @brief How many columns the view was offered this time it is drawn. */
         [[nodiscard]] int availableWidth() const noexcept;

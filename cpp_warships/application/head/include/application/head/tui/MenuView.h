@@ -1,21 +1,11 @@
 #pragma once
 
-#include <application/head/common/Queries.h>
-#include <application/head/common/Theme.h>
-#include <application/head/common/state/MenuState.h>
-#include <application/head/tui/FtxuiView.h>
-#include <application/head/tui/KeyHint.h>
-#include <application/head/tui/ScrollPanel.h>
-
-#include <ftxui/dom/elements.hpp>
-
-namespace cpp_warships::head::common {
-    class PresentationContext;
-}
+#include <application/head/tui/DialogView.h>
 
 namespace cpp_warships::head::tui {
-    /** @brief Draws the menu: the title, the board sizes on offer and the themes. */
-    class MenuView final : public FtxuiRenderer {
+    /** @brief The menu: the title, the board size and theme being chosen, and what can be done
+     * next. */
+    class MenuView final : public DialogView {
     public:
         MenuView(
             const common::PresentationContext& context,
@@ -23,14 +13,9 @@ namespace cpp_warships::head::tui {
         ) noexcept;
 
     protected:
-        [[nodiscard]] ftxui::Element renderElement() override;
-        void publishLayout() override;
-
-    private:
-        const common::PresentationContext& context_;
-        common::input::GridGeometry& geometry_;
-        ScrollPanel bodyPanel_;
-        ScrollPanel shortcutsPanel_;
-        KeyHotspots hotspots_;
+        [[nodiscard]] ftxui::Element title() override;
+        [[nodiscard]] std::string contentHeading() const override;
+        [[nodiscard]] ftxui::Element content() override;
+        [[nodiscard]] std::vector<KeyHint> hints() const override;
     };
 }  // namespace cpp_warships::head::tui

@@ -18,7 +18,7 @@ namespace cpp_warships::input_parser::command {
             if (commandPrint) {
                 commandPrint(options);
             } else {
-                DefaultHelp::PrintCommand<ParserCommand*>(command, DefaultHelp::PrintParam);
+                DefaultHelp::PrintCommand<ParserCommand*>(command, DefaultHelp::PrintParameter);
                 ViewHelper::consoleOut("");
             }
         }

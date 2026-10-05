@@ -74,7 +74,7 @@ namespace cpp_warships::input_parser::model {
             return this->config.executable;
         }
 
-        [[nodiscard]] std::vector<ParserParameter> getParams() const {
+        [[nodiscard]] std::vector<ParserParameter> getParameters() const {
             return this->config.parameters;
         }
 

@@ -114,27 +114,35 @@ namespace {
     bool isQuit(const ftxui::Event& event) {
         return event == ftxui::Event::Escape || (event.is_character() && event.character() == "q");
     }
+
+    Field ownDemoField() {
+        return fieldWith({
+            {{2, 3}, CellState::Ship},
+            {{2, 4}, CellState::Ship},
+            {{2, 5}, CellState::Hit},
+            {{5, 7}, CellState::Hit},
+            {{6, 1}, CellState::Miss},
+            {{8, 8}, CellState::Miss},
+        });
+    }
+
+    Field enemyDemoField() {
+        return fieldWith({
+            {{4, 3}, CellState::Ship},
+            {{5, 3}, CellState::Ship},
+            {{6, 3}, CellState::Ship},
+            {{1, 2}, CellState::Hit},
+            {{7, 8}, CellState::Hit},
+            {{8, 8}, CellState::Hit},
+            {{9, 0}, CellState::Miss},
+            {{4, 4}, CellState::Miss},
+        });
+    }
 }  // namespace
 
 int main() {
-    const Field ownField = fieldWith({
-        {{2, 3}, CellState::Ship},
-        {{2, 4}, CellState::Ship},
-        {{2, 5}, CellState::Hit},
-        {{5, 7}, CellState::Hit},
-        {{6, 1}, CellState::Miss},
-        {{8, 8}, CellState::Miss},
-    });
-    const Field enemyField = fieldWith({
-        {{4, 3}, CellState::Ship},
-        {{5, 3}, CellState::Ship},
-        {{6, 3}, CellState::Ship},
-        {{1, 2}, CellState::Hit},
-        {{7, 8}, CellState::Hit},
-        {{8, 8}, CellState::Hit},
-        {{9, 0}, CellState::Miss},
-        {{4, 4}, CellState::Miss},
-    });
+    const Field ownField = ownDemoField();
+    const Field enemyField = enemyDemoField();
 
     auto screen = ftxui::ScreenInteractive::TerminalOutput();
     const std::array<ftxui::Component, 2> fields{

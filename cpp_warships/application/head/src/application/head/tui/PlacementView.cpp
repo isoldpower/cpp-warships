@@ -5,6 +5,7 @@
 #include <application/head/tui/FtxuiPalette.h>
 #include <application/head/tui/KeyHint.h>
 #include <application/head/tui/PlacementView.h>
+#include <application/head/tui/ScreenParts.h>
 #include <application/head/tui/ScrollPanel.h>
 
 #include <cstddef>
@@ -118,14 +119,6 @@ namespace cpp_warships::head::tui {
             return ftxui::text(isAcross ? "lying across" : "lying down") | color(theme.textMuted);
         }
 
-        ftxui::Element divider(const common::Theme& theme) {
-            return ftxui::separator() | color(theme.border);
-        }
-
-        ftxui::Element sectionHeading(const common::Theme& theme, const std::string& title) {
-            return ftxui::text(title) | ftxui::bold | color(theme.accent);
-        }
-
         std::vector<KeyHint> legend(const flow::PlacementPlan& plan) {
             std::vector<KeyHint> hints{
                 KeyHint{.key = "arrows", .description = "aim"},
@@ -142,6 +135,42 @@ namespace cpp_warships::head::tui {
 
             hints.push_back(KeyHint{.key = "esc", .description = "back to the menu"});
             return hints;
+        }
+
+        /** @brief The screen every panel of this view belongs to. */
+        constexpr common::ScreenKind SCREEN = common::ScreenKind::Placement;
+
+        /** @brief Every panel of the placement screen, drawn and waiting to be arranged. */
+        struct PlacementPanels {
+            ftxui::Element waters;
+            ftxui::Element fleet;
+            ftxui::Element shortcuts;
+        };
+
+        /** @brief A phone-sized screen: the board over the fleet over the keys. */
+        ftxui::Element stackedBody(const common::Theme& theme, PlacementPanels panels) {
+            return ftxui::vbox(
+                {std::move(panels.waters) | ftxui::yflex_grow |
+                     ftxui::yflex_shrink_factor(BOARD_PANEL_SHRINK_WEIGHT),
+                 divider(theme),
+                 std::move(panels.fleet),
+                 divider(theme),
+                 std::move(panels.shortcuts)}
+            );
+        }
+
+        /** @brief A wider screen: the board, with the fleet and the keys in a column beside it. */
+        ftxui::Element sideBarBody(const common::Theme& theme, PlacementPanels panels) {
+            return ftxui::hbox(
+                {std::move(panels.waters) | ftxui::flex,
+                 divider(theme),
+                 ftxui::vbox(
+                     {std::move(panels.fleet),
+                      divider(theme),
+                      std::move(panels.shortcuts),
+                      ftxui::filler()}
+                 ) | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, PLACEMENT_PANEL_WIDTH)}
+            );
         }
     }  // namespace
 
@@ -166,13 +195,28 @@ namespace cpp_warships::head::tui {
 
     ftxui::Element PlacementView::renderElement() {
         const common::Theme& theme = context_.theme();
+        PlacementPanels panels{
+            .waters = renderWaters(),
+            .fleet = renderFleet(),
+            .shortcuts = renderShortcuts()
+        };
+
+        return screenFrame(
+            theme,
+            header(theme, context_.game().match()),
+            isNarrow() ? stackedBody(theme, std::move(panels))
+                       : sideBarBody(theme, std::move(panels)),
+            noticeBlock(theme, context_.application())
+        );
+    }
+
+    ftxui::Element PlacementView::renderWaters() {
+        const common::Theme& theme = context_.theme();
         const flow::Match& match = context_.game().match();
         const common::state::PlacementState& state = context_.state().placement;
-        constexpr common::ScreenKind SCREEN = common::ScreenKind::Placement;
-
-        const flow::PlacementPlan plan = match.playerPlacementPlan();
         const core::Board& board = match.playerBoard();
-        const int lengthInHand = common::state::shipLengthInHand(plan, state);
+        const int lengthInHand =
+            common::state::shipLengthInHand(match.playerPlacementPlan(), state);
 
         const BoardOverlay overlay{
             .cursor = state.cursor,
@@ -180,13 +224,21 @@ namespace cpp_warships::head::tui {
             .markColors = shipInHandColors(board, state, lengthInHand, theme)
         };
 
-        ftxui::Element waters = boardPanel_.render(
+        return boardPanel_.render(
             context_,
             SCREEN,
             ftxui::text("YOUR WATERS") | ftxui::bold | color(theme.textMuted),
             boardView_.render(board, core::Visibility::Owner, theme, overlay) | ftxui::center
         );
-        ftxui::Element fleet = fleetPanel_.render(
+    }
+
+    ftxui::Element PlacementView::renderFleet() {
+        const common::Theme& theme = context_.theme();
+        const common::state::PlacementState& state = context_.state().placement;
+        const flow::PlacementPlan plan = context_.game().match().playerPlacementPlan();
+        const int lengthInHand = common::state::shipLengthInHand(plan, state);
+
+        return fleetPanel_.render(
             context_,
             SCREEN,
             sectionHeading(theme, "FLEET"),
@@ -196,37 +248,18 @@ namespace cpp_warships::head::tui {
                  standing(theme, plan, state)}
             )
         );
-        ftxui::Element shortcuts = shortcutsPanel_.render(
-            context_,
-            SCREEN,
-            sectionHeading(theme, "KEYS"),
-            keyLegend(theme, legend(plan), hotspots_, !context_.state().isKeyboardLayoutFree)
+    }
+
+    ftxui::Element PlacementView::renderShortcuts() {
+        const common::Theme& theme = context_.theme();
+        const ftxui::Element legendElement = keyLegend(
+            theme,
+            legend(context_.game().match().playerPlacementPlan()),
+            hotspots_,
+            !context_.state().isKeyboardLayoutFree
         );
 
-        ftxui::Element body =
-            isNarrow()
-                ? ftxui::vbox(
-                      {std::move(waters) | ftxui::yflex_grow |
-                           ftxui::yflex_shrink_factor(BOARD_PANEL_SHRINK_WEIGHT),
-                       divider(theme),
-                       std::move(fleet),
-                       divider(theme),
-                       std::move(shortcuts)}
-                  )
-                : ftxui::hbox(
-                      {std::move(waters) | ftxui::flex,
-                       divider(theme),
-                       ftxui::vbox(
-                           {std::move(fleet), divider(theme), std::move(shortcuts), ftxui::filler()}
-                       ) | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, PLACEMENT_PANEL_WIDTH)}
-                  );
-
-        return ftxui::vbox(
-                   {header(theme, match),
-                    divider(theme),
-                    std::move(body) | ftxui::flex,
-                    noticeBlock(theme, context_.application())}
-               ) |
-               ftxui::border | color(theme.border) | bgcolor(theme.background) | ftxui::flex;
+        return shortcutsPanel_
+            .render(context_, SCREEN, sectionHeading(theme, "KEYS"), legendElement);
     }
 }  // namespace cpp_warships::head::tui

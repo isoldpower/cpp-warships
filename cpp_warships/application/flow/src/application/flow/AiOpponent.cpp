@@ -61,32 +61,38 @@ namespace cpp_warships::flow {
         return neighbours;
     }
 
+    namespace {
+        /** @brief The two cells just past either end of @p hits, which lie in one straight run. */
+        std::array<core::Coordinate, 2> endsOfRun(const std::vector<core::Coordinate>& hits) {
+            const bool isVerticalRun = hits[0].x == hits[1].x;
+            const auto alongRun = [isVerticalRun](const core::Coordinate& hit) {
+                return isVerticalRun ? hit.y : hit.x;
+            };
+            const auto onRun = [isVerticalRun,
+                                fixedAxis = isVerticalRun ? hits[0].x : hits[0].y](int along) {
+                return isVerticalRun ? core::Coordinate{fixedAxis, along}
+                                     : core::Coordinate{along, fixedAxis};
+            };
+
+            const auto [lowest, highest] = std::minmax_element(
+                hits.begin(),
+                hits.end(),
+                [&alongRun](const core::Coordinate& left, const core::Coordinate& right) {
+                    return alongRun(left) < alongRun(right);
+                }
+            );
+
+            return {onRun(alongRun(*lowest) - 1), onRun(alongRun(*highest) + 1)};
+        }
+    }  // namespace
+
     std::optional<core::Coordinate> AiOpponent::continueAlongHits(const core::Board& board) const {
         constexpr std::size_t HITS_THAT_MAKE_A_RUN = 2;
         if (currentTargetHits_.size() < HITS_THAT_MAKE_A_RUN) {
             return std::nullopt;
         }
 
-        const bool isVerticalRun = currentTargetHits_[0].x == currentTargetHits_[1].x;
-
-        int lowestAlongRun = std::numeric_limits<int>::max();
-        int highestAlongRun = std::numeric_limits<int>::min();
-        for (const core::Coordinate& hit : currentTargetHits_) {
-            const int positionAlongRun = isVerticalRun ? hit.y : hit.x;
-            lowestAlongRun = std::min(lowestAlongRun, positionAlongRun);
-            highestAlongRun = std::max(highestAlongRun, positionAlongRun);
-        }
-
-        const core::Coordinate anyHit = currentTargetHits_.front();
-        const int fixedAxis = isVerticalRun ? anyHit.x : anyHit.y;
-        const std::array<core::Coordinate, 2> extensions{
-            isVerticalRun ? core::Coordinate{fixedAxis, lowestAlongRun - 1}
-                          : core::Coordinate{lowestAlongRun - 1, fixedAxis},
-            isVerticalRun ? core::Coordinate{fixedAxis, highestAlongRun + 1}
-                          : core::Coordinate{highestAlongRun + 1, fixedAxis}
-        };
-
-        for (const core::Coordinate& extension : extensions) {
+        for (const core::Coordinate& extension : endsOfRun(currentTargetHits_)) {
             if (board.contains(extension) && !attemptedCoordinates_.contains(extension)) {
                 return extension;
             }

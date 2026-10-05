@@ -13,7 +13,7 @@ namespace cpp_warships::serialization {
     template <char* TName = nullptr>
     class ISerializerTyped;
 
-    template <typename TSerialized, typename TItem, char* TName = nullptr, typename... TArgs>
+    template <typename TSerialized, typename TItem, char* TName = nullptr, typename... TArguments>
     class ISerializer;
 
     template <typename T>
@@ -51,8 +51,8 @@ namespace cpp_warships::serialization {
     template <typename T>
     struct is_serializer_derivative {
     private:
-        template <typename U, typename V, char* Z, typename... TArgs>
-        static std::true_type test(ISerializer<U, V, Z, TArgs...>*);
+        template <typename U, typename V, char* Z, typename... TArguments>
+        static std::true_type test(ISerializer<U, V, Z, TArguments...>*);
         static std::false_type test(...);
 
     public:
@@ -93,19 +93,19 @@ namespace cpp_warships::serialization {
 
         /** @brief Constructor that initializes the serializer with child serializers. */
         template <
-            typename... Args,
+            typename... Arguments,
             typename = std::enable_if_t<
-                (sizeof...(Args) == sizeof...(TChildren)) && (sizeof...(TChildren) > 0) &&
-                std::is_same_v<std::tuple<Args...>, std::tuple<TChildren...>>>>
-        explicit ISerializer(Args&&... children)
-            : childrenSerializers(std::forward<Args>(children)...) {}
+                (sizeof...(Arguments) == sizeof...(TChildren)) && (sizeof...(TChildren) > 0) &&
+                std::is_same_v<std::tuple<Arguments...>, std::tuple<TChildren...>>>>
+        explicit ISerializer(Arguments&&... children)
+            : childrenSerializers(std::forward<Arguments>(children)...) {}
 
         /** @brief Method to set child serializers at runtime that will be used
          * by this serializer. */
-        template <typename... Args>
-        void setChildrenSerializers(Args*... children) {
+        template <typename... Arguments>
+        void setChildrenSerializers(Arguments*... children) {
             childrenSerializers =
-                helpers::TupleBuilder<TChildren...>::build(std::forward<Args>(*children)...);
+                helpers::TupleBuilder<TChildren...>::build(std::forward<Arguments>(*children)...);
         }
 
     protected:

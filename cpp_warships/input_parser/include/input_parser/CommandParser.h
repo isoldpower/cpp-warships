@@ -18,11 +18,11 @@ namespace cpp_warships::input_parser {
         );
 
     public:
-        explicit CommandParser(const model::SchemeMap<command::ParserCommand*>& scheme);
+        explicit CommandParser(const model::SchemeMap<command::ParserCommand*>& commandScheme);
 
         CommandParser(
-            const model::SchemeMap<command::ParserCommand*>& scheme,
-            const model::ParseCallback<void>& displayError,
+            const model::SchemeMap<command::ParserCommand*>& commandScheme,
+            const model::ParseCallback<void>& errorDisplay,
             const model::SchemeHelpCallback<command::ParserCommand*>& printHelp = nullptr
         );
 

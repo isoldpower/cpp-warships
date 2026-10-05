@@ -15,9 +15,9 @@ void ViewHelper::errorOut(const std::string& output) {
     std::cerr << output << std::endl;
 }
 
-void ViewHelper::errorOut(const std::string& output, const std::exception& e) {
+void ViewHelper::errorOut(const std::string& output, const std::exception& error) {
     errorOut(output);
-    errorOut(e.what());
+    errorOut(error.what());
 }
 
 bool ViewHelper::confirmAction(

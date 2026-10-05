@@ -8,39 +8,37 @@
 #include <vector>
 
 namespace cpp_warships::head::plain {
+    namespace {
+        [[nodiscard]] std::vector<PlainKey> menuKeys(const model::WarshipsGame& game) {
+            std::vector<PlainKey> keys{{"enter", "start a new match"}};
+            if (game.hasMatch()) {
+                keys.emplace_back("r", "resume the match in play");
+                keys.emplace_back("s", "name it and quit");
+            }
+            if (!game.hasMatch() && game.saves().hasSavedMatch()) {
+                keys.emplace_back("l", "load a saved match");
+            }
+
+            keys.emplace_back("q", "quit");
+            return keys;
+        }
+    }  // namespace
+
     PlainMenuView::PlainMenuView(const common::PresentationContext& context) noexcept
         : context_(context) {}
 
     common::render::Frame PlainMenuView::render(int, int) {
         const std::string boardSize = std::to_string(context_.state().menu.selectedBoardSize);
 
-        std::vector<std::string> lines{
-            "==============================",
-            "         CPP WARSHIPS         ",
-            "==============================",
-            "",
-            "  board size : " + boardSize + " x " + boardSize + "   (left / right)",
-            "  theme      : " + context_.theme().name + "   (t)",
-            "",
-            plainKeyLine("enter", "start a new match"),
-        };
-
-        if (context_.game().hasMatch()) {
-            lines.push_back(plainKeyLine("r", "resume the match in play"));
-            lines.push_back(plainKeyLine("s", "name it and quit"));
-        }
-
-        if (!context_.game().hasMatch() && context_.game().saves().hasSavedMatch()) {
-            lines.push_back(plainKeyLine("l", "load a saved match"));
-        }
-
-        lines.push_back(plainKeyLine("q", "quit"));
-        lines.emplace_back("");
-
-        for (const std::string& notice : common::render::noticesToShow(context_.application())) {
-            lines.push_back("  ! " + notice);
-        }
-
-        return common::render::frameOfLines(lines);
+        return PlainPage{}
+            .lines(plainBanner("         CPP WARSHIPS         "))
+            .blank()
+            .line("  board size : " + boardSize + " x " + boardSize + "   (left / right)")
+            .line("  theme      : " + context_.theme().name + "   (t)")
+            .blank()
+            .keys(menuKeys(context_.game()))
+            .blank()
+            .notices(context_.application())
+            .frame();
     }
 }  // namespace cpp_warships::head::plain

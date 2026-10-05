@@ -1,16 +1,10 @@
 #pragma once
 
-#include <application/head/tui/FtxuiView.h>
-#include <application/head/tui/KeyHint.h>
-#include <application/head/tui/ScrollPanel.h>
-
-namespace cpp_warships::head::common {
-    class PresentationContext;
-}
+#include <application/head/tui/DialogView.h>
 
 namespace cpp_warships::head::tui {
     /** @brief The saved games as a highlighted list, newest first. */
-    class SaveBrowserView final : public FtxuiRenderer {
+    class SaveBrowserView final : public DialogView {
     public:
         SaveBrowserView(
             const common::PresentationContext& context,
@@ -18,14 +12,8 @@ namespace cpp_warships::head::tui {
         ) noexcept;
 
     protected:
-        [[nodiscard]] ftxui::Element renderElement() override;
-        void publishLayout() override;
-
-    private:
-        const common::PresentationContext& context_;
-        common::input::GridGeometry& geometry_;
-        ScrollPanel bodyPanel_;
-        ScrollPanel shortcutsPanel_;
-        KeyHotspots hotspots_;
+        [[nodiscard]] std::string contentHeading() const override;
+        [[nodiscard]] ftxui::Element content() override;
+        [[nodiscard]] std::vector<KeyHint> hints() const override;
     };
 }  // namespace cpp_warships::head::tui

@@ -9,11 +9,11 @@ namespace cpp_warships::input_parser {
         void printCommandsHelp(model::ParsedOptions options);
 
     public:
-        explicit VoidParser(const model::SchemeMap<void>& scheme);
+        explicit VoidParser(const model::SchemeMap<void>& commandScheme);
 
         VoidParser(
-            const model::SchemeMap<void>& scheme,
-            const model::ParseCallback<void>& displayError,
+            const model::SchemeMap<void>& commandScheme,
+            const model::ParseCallback<void>& errorDisplay,
             const model::SchemeHelpCallback<void>& printHelp = nullptr
         );
 

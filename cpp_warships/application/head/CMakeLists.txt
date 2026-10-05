@@ -94,6 +94,8 @@ add_library(warships_head_tui
         include/application/head/tui/KeyHint.h src/application/head/tui/KeyHint.cpp
         include/application/head/tui/BoardView.h src/application/head/tui/BoardView.cpp
         include/application/head/tui/ScrollPanel.h src/application/head/tui/ScrollPanel.cpp
+        include/application/head/tui/ScreenParts.h src/application/head/tui/ScreenParts.cpp
+        include/application/head/tui/DialogView.h src/application/head/tui/DialogView.cpp
         include/application/head/tui/MenuView.h src/application/head/tui/MenuView.cpp
         include/application/head/tui/PlacementView.h src/application/head/tui/PlacementView.cpp
         include/application/head/tui/BattleView.h src/application/head/tui/BattleView.cpp

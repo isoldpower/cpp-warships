@@ -17,18 +17,18 @@ namespace cpp_warships::serialization::helpers::serializers {
             bool isImplicit = false
         ) {
             const std::string prefix = fieldName + ": ";
-            const size_t startPos = findOwnField(data, prefix);
-            if (startPos == std::string::npos) {
+            const size_t fieldStart = findOwnField(data, prefix);
+            if (fieldStart == std::string::npos) {
                 return nullptr;
             }
 
-            const size_t finalStartPos = startPos + prefix.length();
-            size_t endPos = data.find(isImplicit ? "};" : ";", finalStartPos);
-            if (endPos == std::string::npos) {
-                endPos = data.length();
+            const size_t valueStart = fieldStart + prefix.length();
+            size_t valueEnd = data.find(isImplicit ? "};" : ";", valueStart);
+            if (valueEnd == std::string::npos) {
+                valueEnd = data.length();
             }
 
-            return new std::string(data.substr(finalStartPos, endPos - finalStartPos));
+            return new std::string(data.substr(valueStart, valueEnd - valueStart));
         }
 
         /** @brief Sets the value for a specified field in a serialized string.

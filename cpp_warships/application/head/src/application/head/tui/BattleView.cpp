@@ -4,11 +4,14 @@
 #include <application/head/tui/FtxuiNotices.h>
 #include <application/head/tui/FtxuiPalette.h>
 #include <application/head/tui/KeyHint.h>
+#include <application/head/tui/ScreenParts.h>
 #include <application/head/tui/ScrollPanel.h>
 
 #include <algorithm>
 #include <cstddef>
 #include <deque>
+#include <functional>
+#include <map>
 #include <optional>
 #include <string>
 #include <utility>
@@ -41,10 +44,6 @@ namespace cpp_warships::head::tui {
             }
 
             return ftxui::text("the enemy fires") | ftxui::bold | color(theme.danger);
-        }
-
-        ftxui::Element divider(const common::Theme& theme) {
-            return ftxui::separator() | color(theme.border);
         }
 
         ftxui::Element roundAndStanding(const common::Theme& theme, const flow::Match& match) {
@@ -80,10 +79,6 @@ namespace cpp_warships::head::tui {
 
         ftxui::Element boardHeading(const common::Theme& theme, const std::string& title) {
             return ftxui::text(title) | ftxui::bold | color(theme.textMuted);
-        }
-
-        ftxui::Element sectionHeading(const common::Theme& theme, const std::string& title) {
-            return ftxui::text(title) | ftxui::bold | color(theme.accent);
         }
 
         /** @brief How many of each skill are banked, in a settled order rather
@@ -133,6 +128,24 @@ namespace cpp_warships::head::tui {
             return ftxui::hbox(std::move(chips));
         }
 
+        /** @brief One skill of the bank: its place in the queue and its name, the next one marked.
+         */
+        ftxui::Element skillOrderRow(
+            const common::Theme& theme,
+            const flow::Match& match,
+            const std::size_t position,
+            const flow::SkillKind kind
+        ) {
+            const bool isNext = position == 0;
+            return ftxui::hbox(
+                {ftxui::text(std::to_string(position + 1) + "  ") | color(theme.textMuted),
+                 ftxui::text(common::render::skillName(kind)) |
+                     color(isNext ? theme.text : theme.textMuted),
+                 ftxui::filler(),
+                 isNext ? nextMarker(theme, match) : ftxui::text("")}
+            );
+        }
+
         /** @brief The bank in the order it will be spent, oldest first, the next one marked. */
         ftxui::Element skillOrder(const common::Theme& theme, const flow::Match& match) {
             const std::deque<flow::SkillKind>& banked = match.skills().pending();
@@ -141,16 +154,7 @@ namespace cpp_warships::head::tui {
 
             std::vector<ftxui::Element> rows;
             for (std::size_t position = 0; position < listed; ++position) {
-                const bool isNext = position == 0;
-                rows.push_back(
-                    ftxui::hbox(
-                        {ftxui::text(std::to_string(position + 1) + "  ") | color(theme.textMuted),
-                         ftxui::text(common::render::skillName(banked[position])) |
-                             color(isNext ? theme.text : theme.textMuted),
-                         ftxui::filler(),
-                         isNext ? nextMarker(theme, match) : ftxui::text("")}
-                    )
-                );
+                rows.push_back(skillOrderRow(theme, match, position, banked[position]));
             }
 
             if (banked.size() > listed) {
@@ -350,6 +354,40 @@ namespace cpp_warships::head::tui {
                  ) | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, sidePanelWidth)}
             );
         }
+
+        /** @brief The screen every panel of this view belongs to. */
+        constexpr common::ScreenKind SCREEN = common::ScreenKind::Battle;
+
+        /** @brief How the log is shown on a screen of @p tier: folding only where it is narrow. */
+        [[nodiscard]] LogFolding foldingOf(const LayoutTier tier, const bool isCollapsed) {
+            if (tier != LayoutTier::Narrow) {
+                return LogFolding::Fixed;
+            }
+
+            return isCollapsed ? LogFolding::Folded : LogFolding::Open;
+        }
+
+        /** @brief How the panels of a battle are arranged on a screen of @p tier. */
+        using Arrangement = std::function<ftxui::Element(const common::Theme&, BattlePanels, int)>;
+
+        [[nodiscard]] const Arrangement& arrangementFor(const LayoutTier tier) {
+            static const std::map<LayoutTier, Arrangement> ARRANGEMENTS = {
+                {LayoutTier::Narrow,
+                 [](const common::Theme& theme, BattlePanels panels, int) {
+                     return stackedBody(theme, std::move(panels));
+                 }},
+                {LayoutTier::Laptop,
+                 [](const common::Theme& theme, BattlePanels panels, int) {
+                     return stripBelowBody(theme, std::move(panels));
+                 }},
+                {LayoutTier::Wide,
+                 [](const common::Theme& theme, BattlePanels panels, const int screenWidth) {
+                     return sideBarBody(theme, std::move(panels), screenWidth);
+                 }},
+            };
+
+            return ARRANGEMENTS.at(tier);
+        }
     }  // namespace
 
     BattleView::BattleView(
@@ -381,76 +419,85 @@ namespace cpp_warships::head::tui {
 
     ftxui::Element BattleView::renderElement() {
         const common::Theme& theme = context_.theme();
-        const flow::Match& match = context_.game().match();
+        const LogFolding folding = foldingOf(layoutTier(), context_.state().battle.isLogCollapsed);
+
+        BattlePanels panels{
+            .ownWaters = renderOwnWaters(),
+            .enemyWaters = renderEnemyWaters(),
+            .skills = renderSkills(),
+            .story = renderStory(),
+            .shortcuts = renderShortcuts(),
+            .isStoryFolded = folding == LogFolding::Folded
+        };
+
+        return screenFrame(
+            theme,
+            header(theme, context_.game().match(), isNarrow()),
+            arrangementFor(layoutTier())(theme, std::move(panels), availableWidth()),
+            noticeBlock(theme, context_.application())
+        );
+    }
+
+    ftxui::Element BattleView::renderOwnWaters() {
+        const common::Theme& theme = context_.theme();
+        const ftxui::Element board = ownWatersView_.render(
+            context_.game().match().playerBoard(),
+            core::Visibility::Owner,
+            theme,
+            BoardOverlay{}
+        );
+
+        return ownWatersPanel_
+            .render(context_, SCREEN, boardHeading(theme, "YOUR WATERS"), board | ftxui::center);
+    }
+
+    ftxui::Element BattleView::renderEnemyWaters() {
+        const common::Theme& theme = context_.theme();
+        const ftxui::Element board = enemyWatersView_.render(
+            context_.game().match().computerBoard(),
+            core::Visibility::Opponent,
+            theme,
+            BoardOverlay{.cursor = context_.state().battle.target}
+        );
+
+        return enemyWatersPanel_
+            .render(context_, SCREEN, boardHeading(theme, "ENEMY WATERS"), board | ftxui::center);
+    }
+
+    ftxui::Element BattleView::renderSkills() {
+        const common::Theme& theme = context_.theme();
+        return skillsPanel_.render(
+            context_,
+            SCREEN,
+            sectionHeading(theme, "SKILLS"),
+            skillBank(theme, context_.game().match())
+        );
+    }
+
+    ftxui::Element BattleView::renderShortcuts() {
+        const common::Theme& theme = context_.theme();
+        const ftxui::Element legendElement = keyLegend(
+            theme,
+            legend(context_.game().match(), isNarrow()),
+            hotspots_,
+            !context_.state().isKeyboardLayoutFree
+        );
+
+        return shortcutsPanel_
+            .render(context_, SCREEN, sectionHeading(theme, "KEYS"), legendElement);
+    }
+
+    ftxui::Element BattleView::renderStory() {
+        const common::Theme& theme = context_.theme();
         const model::BattleJournal& journal = context_.game().journal();
         const common::state::BattleState& state = context_.state().battle;
-        constexpr common::ScreenKind SCREEN = common::ScreenKind::Battle;
+        const LogFolding folding = foldingOf(layoutTier(), state.isLogCollapsed);
 
-        BoardOverlay ownOverlay;
-        BoardOverlay enemyOverlay;
-        enemyOverlay.cursor = state.target;
-
-        ftxui::Element ownWaters = ownWatersPanel_.render(
-            context_,
-            SCREEN,
-            boardHeading(theme, "YOUR WATERS"),
-            ownWatersView_.render(match.playerBoard(), core::Visibility::Owner, theme, ownOverlay) |
-                ftxui::center
-        );
-        ftxui::Element enemyWaters = enemyWatersPanel_.render(
-            context_,
-            SCREEN,
-            boardHeading(theme, "ENEMY WATERS"),
-            enemyWatersView_.render(
-                match.computerBoard(),
-                core::Visibility::Opponent,
-                theme,
-                enemyOverlay
-            ) | ftxui::center
-        );
-        ftxui::Element skills =
-            skillsPanel_
-                .render(context_, SCREEN, sectionHeading(theme, "SKILLS"), skillBank(theme, match));
-        ftxui::Element shortcuts = shortcutsPanel_.render(
-            context_,
-            SCREEN,
-            sectionHeading(theme, "KEYS"),
-            keyLegend(
-                theme,
-                legend(match, isNarrow()),
-                hotspots_,
-                !context_.state().isKeyboardLayoutFree
-            )
-        );
-        const LogFolding folding = !isNarrow()            ? LogFolding::Fixed
-                                   : state.isLogCollapsed ? LogFolding::Folded
-                                                          : LogFolding::Open;
-        ftxui::Element story = logPanel_.render(
+        return logPanel_.render(
             context_,
             SCREEN,
             journalHeading(theme, journal, state.logScroll, folding),
             folding == LogFolding::Folded ? ftxui::emptyElement() : journalLines(theme, journal)
         );
-
-        BattlePanels panels{
-            .ownWaters = std::move(ownWaters),
-            .enemyWaters = std::move(enemyWaters),
-            .skills = std::move(skills),
-            .story = std::move(story),
-            .shortcuts = std::move(shortcuts),
-            .isStoryFolded = folding == LogFolding::Folded
-        };
-        ftxui::Element body = isNarrow() ? stackedBody(theme, std::move(panels))
-                              : isLaptop()
-                                  ? stripBelowBody(theme, std::move(panels))
-                                  : sideBarBody(theme, std::move(panels), availableWidth());
-
-        return ftxui::vbox(
-                   {header(theme, match, isNarrow()),
-                    divider(theme),
-                    std::move(body) | ftxui::flex,
-                    noticeBlock(theme, context_.application())}
-               ) |
-               ftxui::border | color(theme.border) | bgcolor(theme.background) | ftxui::flex;
     }
 }  // namespace cpp_warships::head::tui

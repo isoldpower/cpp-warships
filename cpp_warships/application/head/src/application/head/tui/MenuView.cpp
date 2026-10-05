@@ -1,31 +1,25 @@
 #include <application/head/common/PresentationContext.h>
-#include <application/head/tui/FtxuiNotices.h>
 #include <application/head/tui/FtxuiPalette.h>
-#include <application/head/tui/KeyHint.h>
 #include <application/head/tui/MenuView.h>
+#include <application/head/tui/ScreenParts.h>
 
-#include <ftxui/component/event.hpp>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace cpp_warships::head::tui {
     namespace {
-        constexpr int MINIMUM_PANEL_WIDTH = 46;
-
-        ftxui::Element titleBlock(const common::Theme& theme) {
-            return ftxui::vbox(
-                {ftxui::text("CPP WARSHIPS") | ftxui::bold | color(theme.accent) | ftxui::hcenter,
-                 ftxui::text("a terminal fleet engagement") | color(theme.textMuted) |
-                     ftxui::hcenter}
+        /** @brief One setting: what it is, what it is set to, and the keys that change it. */
+        ftxui::Element settingLine(
+            const common::Theme& theme,
+            const std::string& label,
+            ftxui::Element value,
+            const std::string& keys
+        ) {
+            return ftxui::hbox(
+                {ftxui::text(label) | color(theme.textMuted),
+                 std::move(value) | ftxui::bold,
+                 ftxui::text("   " + keys) | color(theme.textMuted)}
             );
-        }
-        ftxui::Element divider(const common::Theme& theme) {
-            return ftxui::separator() | color(theme.border);
-        }
-
-        ftxui::Element sectionHeading(const common::Theme& theme, const std::string& title) {
-            return ftxui::text(title) | ftxui::bold | color(theme.accent);
         }
     }  // namespace
 
@@ -33,80 +27,54 @@ namespace cpp_warships::head::tui {
         const common::PresentationContext& context,
         common::input::GridGeometry& geometry
     ) noexcept
-        : context_(context)
-        , geometry_(geometry)
-        , bodyPanel_(common::input::ScreenRegion::Settings)
-        , shortcutsPanel_(common::input::ScreenRegion::Shortcuts) {}
+        : DialogView(
+              context,
+              geometry,
+              common::ScreenKind::Menu,
+              common::input::ScreenRegion::Settings
+          ) {}
 
-    void MenuView::publishLayout() {
-        bodyPanel_.publish(geometry_);
-        shortcutsPanel_.publish(geometry_);
-        hotspots_.publish(geometry_);
+    ftxui::Element MenuView::title() {
+        const common::Theme& theme = context_.theme();
+        return ftxui::vbox(
+            {ftxui::text("CPP WARSHIPS") | ftxui::bold | color(theme.accent) | ftxui::hcenter,
+             ftxui::text("a terminal fleet engagement") | color(theme.textMuted) | ftxui::hcenter,
+             divider(theme)}
+        );
     }
 
-    ftxui::Element MenuView::renderElement() {
+    std::string MenuView::contentHeading() const {
+        return "SETTINGS";
+    }
+
+    ftxui::Element MenuView::content() {
         const common::Theme& theme = context_.theme();
-        const common::state::MenuState& state = context_.state().menu;
-        const bool hasMatchInProgress = context_.game().hasMatch();
-        constexpr common::ScreenKind SCREEN = common::ScreenKind::Menu;
+        const std::string boardSize = std::to_string(context_.state().menu.selectedBoardSize);
 
-        ftxui::Element settings = ftxui::vbox(
-            {ftxui::hbox(
-                 {ftxui::text("board size  ") | color(theme.textMuted),
-                  ftxui::text(
-                      std::to_string(state.selectedBoardSize) + " x " +
-                      std::to_string(state.selectedBoardSize)
-                  ) | ftxui::bold |
-                      color(theme.text),
-                  ftxui::text("   left right") | color(theme.textMuted)}
+        return ftxui::vbox(
+            {settingLine(
+                 theme,
+                 "board size  ",
+                 ftxui::text(boardSize + " x " + boardSize) | color(theme.text),
+                 "left right"
              ),
-             ftxui::hbox(
-                 {ftxui::text("theme       ") | color(theme.textMuted),
-                  ftxui::text(theme.name) | ftxui::bold | color(theme.accent),
-                  ftxui::text("   t") | color(theme.textMuted)}
-             )}
+             settingLine(theme, "theme       ", ftxui::text(theme.name) | color(theme.accent), "t")}
         );
+    }
 
-        std::vector<KeyHint> hints{KeyHint{.key = "enter", .description = "start a new match"}};
+    std::vector<KeyHint> MenuView::hints() const {
+        const bool hasMatchInProgress = context_.game().hasMatch();
+        std::vector<KeyHint> listed{{.key = "enter", .description = "start a new match"}};
 
         if (hasMatchInProgress) {
-            hints.push_back(KeyHint{.key = "r", .description = "resume the match in play"});
-            hints.push_back(KeyHint{.key = "s", .description = "name it and quit"});
+            listed.push_back({.key = "r", .description = "resume the match in play"});
+            listed.push_back({.key = "s", .description = "name it and quit"});
         }
-
         if (!hasMatchInProgress && context_.game().saves().hasSavedMatch()) {
-            hints.push_back(KeyHint{.key = "l", .description = "load a saved match"});
+            listed.push_back({.key = "l", .description = "load a saved match"});
         }
 
-        hints.push_back(KeyHint{.key = "q", .description = "quit"});
-
-        return dialogFrame(
-            theme,
-            ftxui::vbox(
-                {titleBlock(theme),
-                 divider(theme),
-                 bodyPanel_.render(
-                     context_,
-                     SCREEN,
-                     sectionHeading(theme, "SETTINGS"),
-                     std::move(settings)
-                 ),
-                 divider(theme),
-                 shortcutsPanel_.render(
-                     context_,
-                     SCREEN,
-                     sectionHeading(theme, "KEYS"),
-                     keyLegend(
-                         theme,
-                         std::move(hints),
-                         hotspots_,
-                         !context_.state().isKeyboardLayoutFree
-                     )
-                 ),
-                 noticeBlock(theme, context_.application())}
-            ),
-            MINIMUM_PANEL_WIDTH,
-            isNarrow()
-        );
+        listed.push_back({.key = "q", .description = "quit"});
+        return listed;
     }
 }  // namespace cpp_warships::head::tui

@@ -74,7 +74,7 @@ namespace cpp_warships::input_parser::model {
         const ParserCommandInfo<void> command{config};
 
         EXPECT_EQ(command.getDescription(), "does a thing");
-        EXPECT_EQ(command.getParams().size(), 1U);
+        EXPECT_EQ(command.getParameters().size(), 1U);
         EXPECT_FALSE(command.getResolveAllFlags());
     }
 

@@ -2,6 +2,7 @@
 #include <input_parser/model/ParserCommandInfo.h>
 #include <utilities/StringHelper.h>
 
+#include <algorithm>
 #include <functional>
 #include <map>
 #include <unordered_map>
@@ -20,17 +21,20 @@ namespace cpp_warships::input_parser::model {
         SchemeMap<T> scheme;
         ParseCallback<void> displayError;
 
-        void increaseAmountOnHashMap(std::string& key, std::unordered_map<std::string, int>& map) {
-            if (map.find(key) == map.end()) {
-                map[key] = 1;
-            } else {
-                map[key]++;
-            }
+        void increaseAmountOnHashMap(
+            const std::string& key,
+            std::unordered_map<std::string, int>& map
+        ) {
+            ++map[key];
         }
 
-        void decreaseAmountOnHashMap(std::string& key, std::unordered_map<std::string, int>& map) {
-            if (map.find(key) != map.end()) {
-                map[key]--;
+        void decreaseAmountOnHashMap(
+            const std::string& key,
+            std::unordered_map<std::string, int>& map
+        ) {
+            const auto found = map.find(key);
+            if (found != map.end()) {
+                --found->second;
             }
         }
 
@@ -43,10 +47,9 @@ namespace cpp_warships::input_parser::model {
             const ParserCommandInfo<T>& command,
             ParserParameter& result
         ) {
-            for (size_t i = 0; i < command.getParams().size(); i++) {
-                ParserParameter param = command.getParams()[i];
-                if (param.getIsFlagPresent(flag)) {
-                    result = param;
+            for (const ParserParameter& parameter : command.getParameters()) {
+                if (parameter.getIsFlagPresent(flag)) {
+                    result = parameter;
                     return true;
                 }
             }
@@ -54,53 +57,53 @@ namespace cpp_warships::input_parser::model {
             return false;
         }
 
+        /** @brief How many times each flag of a command may appear, and how many of those
+         * appearances are required. */
+        struct FlagCounts {
+            std::unordered_map<std::string, int> necessary;
+            std::unordered_map<std::string, int> all;
+        };
+
+        FlagCounts flagCountsOf(const ParserCommandInfo<T>& commandScheme) {
+            FlagCounts counts;
+            for (const auto& parameter : commandScheme.getParameters()) {
+                for (const std::string& flag : parameter.getFlags()) {
+                    increaseAmountOnHashMap(flag, counts.all);
+                    if (parameter.getNecessary()) {
+                        increaseAmountOnHashMap(flag, counts.necessary);
+                    }
+                }
+            }
+
+            return counts;
+        }
+
         bool necessaryFlagsPresent(
             const std::vector<std::string>& input,
             const ParserCommandInfo<T>& commandScheme
         ) {
-            auto params = commandScheme.getParams();
+            const auto isStillMissing = [](const auto& entry) { return entry.second > 0; };
+            const auto isRepeated = [](const auto& entry) { return entry.second < 0; };
 
-            std::unordered_map<std::string, int> necessaryFlags;
-            std::unordered_map<std::string, int> allFlags;
-
-            for (const auto& param : params) {
-                std::vector<std::string> flags = param.getFlags();
-                bool isNecessary = param.getNecessary();
-
-                for (size_t j = 0; j < flags.size(); j++) {
-                    increaseAmountOnHashMap(flags[j], allFlags);
-                    if (isNecessary)
-                        increaseAmountOnHashMap(flags[j], necessaryFlags);
-                }
+            FlagCounts counts = flagCountsOf(commandScheme);
+            for (const std::string& chunk : input) {
+                decreaseAmountOnHashMap(chunk, counts.necessary);
+                decreaseAmountOnHashMap(chunk, counts.all);
             }
 
-            for (auto currentChunk : input) {
-                decreaseAmountOnHashMap(currentChunk, necessaryFlags);
-                decreaseAmountOnHashMap(currentChunk, allFlags);
-            }
-
-            for (auto& necessaryFlag : necessaryFlags) {
-                if (necessaryFlag.second > 0)
-                    return false;
-            }
-
-            for (auto& allFlag : allFlags) {
-                if (allFlag.second < 0)
-                    return false;
-            }
-
-            return true;
+            return std::none_of(counts.necessary.begin(), counts.necessary.end(), isStillMissing) &&
+                   std::none_of(counts.all.begin(), counts.all.end(), isRepeated);
         }
 
-        std::pair<bool, ParsedOptions> validateParams(
+        std::pair<bool, ParsedOptions> validateParameters(
             const std::vector<std::string>& inputChunks,
             ParserCommandInfo<T>& command
         ) {
             bool isValid = true;
-            ParsedOptions validParamValues;
+            ParsedOptions validValues;
 
-            for (size_t i = 0; i < inputChunks.size(); i++) {
-                const std::string& chunk = inputChunks[i];
+            for (std::size_t position = 0; position < inputChunks.size(); ++position) {
+                const std::string& chunk = inputChunks[position];
                 if (chunk.substr(0, 2) != "--") {
                     continue;
                 }
@@ -111,16 +114,16 @@ namespace cpp_warships::input_parser::model {
                     continue;
                 }
 
-                const std::string optionValue =
-                    i == inputChunks.size() - 1 ? "" : inputChunks[i + 1];
+                const bool isLastChunk = position + 1 == inputChunks.size();
+                const std::string optionValue = isLastChunk ? "" : inputChunks[position + 1];
                 const std::pair<bool, std::string> validationResult = option.validate(optionValue);
                 isValid = isValid && validationResult.first;
                 if (isValid) {
-                    validParamValues.emplace(chunk.substr(2), validationResult.second);
+                    validValues.emplace(chunk.substr(2), validationResult.second);
                 }
             }
 
-            return std::make_pair(isValid, validParamValues);
+            return std::make_pair(isValid, validValues);
         }
 
     public:
@@ -147,7 +150,7 @@ namespace cpp_warships::input_parser::model {
 
             ParserCommandInfo<T> relatedCommand = this->scheme.at(splitInput[0]);
             const std::pair<bool, ParsedOptions> validationResult =
-                this->validateParams(splitInput, relatedCommand);
+                this->validateParameters(splitInput, relatedCommand);
             ParsedOptions parsedArguments = validationResult.second;
 
             if (!validationResult.first) {

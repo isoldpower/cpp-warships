@@ -6,6 +6,8 @@
 #include <serialization/helpers/serializers/JsonStringSerializer.h>
 #include <serialization/helpers/type_converters/StringTypeConverter.h>
 
+#include <memory>
+
 namespace cpp_warships::serialization::example {
     using namespace helpers::serializers;
     using namespace helpers::type_converters;
@@ -21,7 +23,7 @@ namespace cpp_warships::serialization::example {
 
     public:
         friend TestClassStringSerializer;
-        friend std::ostream& operator<<(std::ostream& os, const TestClass& obj);
+        friend std::ostream& operator<<(std::ostream& stream, const TestClass& item);
 
         TestClass()
             : implicitClass({}) {};
@@ -62,55 +64,62 @@ namespace cpp_warships::serialization::example {
         }
 
         TestClass deserialize(std::string data) override {
-            auto* testClass = new TestClass();
+            TestClass restored;
 
             try {
-                helpers::serializers::JsonStringSerializer::setFieldValue<int>(
-                    &testClass->intPublicField,
-                    data,
-                    "intPublicField",
-                    helpers::type_converters::StringTypeConverter::stringToInt
-                );
-                JsonStringSerializer::setFieldValue(
-                    &testClass->stringPublicField,
-                    data,
-                    "stringPublicField"
-                );
-                helpers::serializers::JsonStringSerializer::setFieldValue<int>(
-                    &testClass->intPrivateField,
-                    data,
-                    "intPrivateField",
-                    helpers::type_converters::StringTypeConverter::stringToInt
-                );
-                JsonStringSerializer::setFieldValue(
-                    &testClass->stringPrivateField,
-                    data,
-                    "stringPrivateField"
-                );
-
-                if (const auto field =
-                        JsonStringSerializer::extractFieldValue(data, "implicitClass", true)) {
-                    testClass->implicitClass = std::get<0>(childrenSerializers).deserialize(*field);
-                    delete field;
-                }
-            } catch (std::exception& e) {
-                std::cerr << "Deserialization interrupted: \n\t" << e.what() << std::endl;
-
-                delete testClass;
-                throw e;
+                readOwnFields(restored, data);
+                readNestedClass(restored, data);
+            } catch (const std::exception& error) {
+                std::cerr << "Deserialization interrupted: \n\t" << error.what() << std::endl;
+                throw;
             }
 
-            return *testClass;
+            return restored;
+        }
+
+    private:
+        static void readOwnFields(TestClass& restored, std::string& data) {
+            JsonStringSerializer::setFieldValue<int>(
+                &restored.intPublicField,
+                data,
+                "intPublicField",
+                StringTypeConverter::stringToInt
+            );
+            JsonStringSerializer::setFieldValue(
+                &restored.stringPublicField,
+                data,
+                "stringPublicField"
+            );
+            JsonStringSerializer::setFieldValue<int>(
+                &restored.intPrivateField,
+                data,
+                "intPrivateField",
+                StringTypeConverter::stringToInt
+            );
+            JsonStringSerializer::setFieldValue(
+                &restored.stringPrivateField,
+                data,
+                "stringPrivateField"
+            );
+        }
+
+        void readNestedClass(TestClass& restored, std::string& data) {
+            const std::unique_ptr<std::string> field{
+                JsonStringSerializer::extractFieldValue(data, "implicitClass", true)
+            };
+            if (field != nullptr) {
+                restored.implicitClass = std::get<0>(childrenSerializers).deserialize(*field);
+            }
         }
     };
 
-    inline std::ostream& operator<<(std::ostream& os, const TestClass& obj) {
-        os << "TestClass intPublicField: " << obj.intPublicField << std::endl;
-        os << "TestClass stringPublicField: " << obj.stringPublicField << std::endl;
-        os << "TestClass intPrivateField: " << obj.intPrivateField << std::endl;
-        os << "TestClass stringPrivateField: " << obj.stringPrivateField << std::endl;
-        os << obj.implicitClass << std::endl;
+    inline std::ostream& operator<<(std::ostream& stream, const TestClass& item) {
+        stream << "TestClass intPublicField: " << item.intPublicField << std::endl;
+        stream << "TestClass stringPublicField: " << item.stringPublicField << std::endl;
+        stream << "TestClass intPrivateField: " << item.intPrivateField << std::endl;
+        stream << "TestClass stringPrivateField: " << item.stringPrivateField << std::endl;
+        stream << item.implicitClass << std::endl;
 
-        return os;
+        return stream;
     }
 }  // namespace cpp_warships::serialization::example

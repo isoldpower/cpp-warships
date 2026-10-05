@@ -101,7 +101,7 @@ namespace cpp_warships::input_parser::builder {
         const model::ParserCommandInfo<void> command{config};
 
         EXPECT_EQ(command.getDescription(), "does a thing");
-        EXPECT_EQ(command.getParams().size(), 1U);
+        EXPECT_EQ(command.getParameters().size(), 1U);
         EXPECT_TRUE(command.getResolveAllFlags());
         EXPECT_NE(command.getExecutable(), nullptr);
     }

@@ -20,7 +20,7 @@ namespace cpp_warships::serialization::example {
 
     public:
         friend ImplicitTestClassStringSerializer;
-        friend std::ostream& operator<<(std::ostream& os, const ImplicitTestClass& obj);
+        friend std::ostream& operator<<(std::ostream& stream, const ImplicitTestClass& item);
 
         ImplicitTestClass() = default;
         std::string stringPublicField = "default-public";
@@ -67,10 +67,10 @@ namespace cpp_warships::serialization::example {
         }
     };
 
-    inline std::ostream& operator<<(std::ostream& os, const ImplicitTestClass& obj) {
-        os << "ImplicitTestClass stringPublicField: " << obj.stringPublicField << std::endl;
-        os << "ImplicitTestClass stringPrivateField: " << obj.stringPrivateField << std::endl;
+    inline std::ostream& operator<<(std::ostream& stream, const ImplicitTestClass& item) {
+        stream << "ImplicitTestClass stringPublicField: " << item.stringPublicField << std::endl;
+        stream << "ImplicitTestClass stringPrivateField: " << item.stringPrivateField << std::endl;
 
-        return os;
+        return stream;
     }
 }  // namespace cpp_warships::serialization::example

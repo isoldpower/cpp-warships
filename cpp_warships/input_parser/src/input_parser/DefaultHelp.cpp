@@ -4,16 +4,17 @@
 #include <iostream>
 
 namespace cpp_warships::input_parser {
-    void DefaultHelp::PrintParam(const model::ParserParameter& param) {
+    void DefaultHelp::PrintParameter(const model::ParserParameter& parameter) {
         std::string flagsOutput;
-        for (const auto& flag : param.getFlags()) {
+        for (const auto& flag : parameter.getFlags()) {
             flagsOutput += flag + " ";
         }
         ViewHelper::consoleOut("├── flags: [ " + flagsOutput + "]", 2);
 
-        std::string description = param.getDescription().empty() ? "none" : param.getDescription();
+        std::string description =
+            parameter.getDescription().empty() ? "none" : parameter.getDescription();
         ViewHelper::consoleOut("├── description: " + description, 2);
-        std::string necessary = param.getNecessary() ? "true" : "false";
+        std::string necessary = parameter.getNecessary() ? "true" : "false";
         ViewHelper::consoleOut("└── is necessary: " + necessary, 2);
     };
 }  // namespace cpp_warships::input_parser
