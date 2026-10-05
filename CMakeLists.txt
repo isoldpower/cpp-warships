@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project (cpp_warships
-        VERSION 0.1.0
+        VERSION 0.2.0
         DESCRIPTION "C++ terminal-based warships game"
         LANGUAGES CXX)
 
