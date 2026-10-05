@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -58,7 +59,15 @@ namespace cpp_warships::head::tui {
                 return " ";
             }
 
-            return appearanceOf(board.stateAt(coordinate, visibility), theme).glyph;
+            const core::CellState state = board.stateAt(coordinate, visibility);
+            const std::optional<int> health = board.healthAt(coordinate, visibility);
+            const bool isHitAfloat =
+                state == core::CellState::Damaged || state == core::CellState::Destroyed;
+            if (isHitAfloat && health.has_value()) {
+                return std::to_string(*health);
+            }
+
+            return appearanceOf(state, theme).glyph;
         }
 
         ftxui::Element tileElement(const std::string& glyph, const common::CellColors& colors) {

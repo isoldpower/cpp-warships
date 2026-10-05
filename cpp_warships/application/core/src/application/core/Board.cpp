@@ -184,6 +184,17 @@ namespace cpp_warships::core {
         return CellState::Water;
     }
 
+    std::optional<int> Board::healthAt(Coordinate coordinate, Visibility visibility) const {
+        const Ship* ship = shipAt(coordinate);
+        const bool isKnown = visibility == Visibility::Owner || attackedCells_.contains(coordinate);
+        if (ship == nullptr || !isKnown) {
+            return std::nullopt;
+        }
+
+        const std::optional<int> index = ship->segmentIndexAt(coordinate);
+        return index.has_value() ? std::optional<int>{ship->segmentHealth(*index)} : std::nullopt;
+    }
+
     bool Board::hasShipWithin(Coordinate center, int radius) const {
         for (int offsetY = -radius; offsetY <= radius; ++offsetY) {
             for (int offsetX = -radius; offsetX <= radius; ++offsetX) {

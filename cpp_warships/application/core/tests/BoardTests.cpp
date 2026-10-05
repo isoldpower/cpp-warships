@@ -356,4 +356,24 @@ namespace cpp_warships::core {
         EXPECT_EQ(board.stateAt({8, 8}, Visibility::Opponent), CellState::Miss);
         EXPECT_EQ(board.attack({2, 1}, 1), AttackOutcome::Sunk);
     }
+
+    TEST(BoardTests, TellsTheOwnerTheHealthOfEverySegment) {
+        Board board = makeBoard();
+        board.place({0, 0}, Direction::Horizontal, 2, 3);
+
+        EXPECT_EQ(board.healthAt({0, 0}, Visibility::Owner), 3);
+        EXPECT_EQ(board.healthAt({5, 5}, Visibility::Owner), std::nullopt);
+    }
+
+    TEST(BoardTests, TellsTheOpponentTheHealthOfASegmentOnlyOnceItIsHit) {
+        Board board = makeBoard();
+        board.place({0, 0}, Direction::Horizontal, 2, 3);
+
+        EXPECT_EQ(board.healthAt({0, 0}, Visibility::Opponent), std::nullopt);
+
+        (void)board.attack({0, 0}, 1);
+
+        EXPECT_EQ(board.healthAt({0, 0}, Visibility::Opponent), 2);
+        EXPECT_EQ(board.healthAt({1, 0}, Visibility::Opponent), std::nullopt);
+    }
 }  // namespace cpp_warships::core

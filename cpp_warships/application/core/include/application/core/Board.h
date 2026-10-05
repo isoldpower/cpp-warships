@@ -5,6 +5,7 @@
 #include <application/core/Outcomes.h>
 #include <application/core/Ship.h>
 
+#include <optional>
 #include <unordered_set>
 #include <vector>
 
@@ -51,6 +52,13 @@ namespace cpp_warships::core {
 
         /** @brief What @p visibility knows about @p coordinate. */
         [[nodiscard]] CellState stateAt(Coordinate coordinate, Visibility visibility) const;
+
+        /** @brief How many hit points the ship segment at @p coordinate has left, when
+         * @p visibility may know it: always for the owner, only once it was hit otherwise. */
+        [[nodiscard]] std::optional<int> healthAt(
+            Coordinate coordinate,
+            Visibility visibility
+        ) const;
 
         /** @brief Whether any ship stands within @p radius of @p center, ignoring fog. */
         [[nodiscard]] bool hasShipWithin(Coordinate center, int radius) const;

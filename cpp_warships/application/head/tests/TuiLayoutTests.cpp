@@ -1,9 +1,12 @@
+#include <application/core/Board.h>
 #include <application/head/common/PresentationContext.h>
 #include <application/head/common/ScreenKind.h>
+#include <application/head/common/Theme.h>
 #include <application/head/common/input/Keystroke.h>
 #include <application/head/common/input/PanelScrolling.h>
 #include <application/head/common/render/Frame.h>
 #include <application/head/tui/BattleView.h>
+#include <application/head/tui/BoardView.h>
 #include <application/head/tui/FtxuiView.h>
 #include <application/head/tui/KeyHint.h>
 #include <application/head/tui/MenuView.h>
@@ -338,4 +341,34 @@ namespace cpp_warships::head::tui {
         EXPECT_EQ(pressed->character, "q");
     }
 
+    TEST(BoardViewTests, AHitSegmentShowsTheHealthItHasLeftUntilItsShipSinks) {
+        constexpr int SEGMENT_HEALTH = 3;
+        core::Board board{4, 1};
+        board.place({0, 0}, core::Direction::Horizontal, 2, SEGMENT_HEALTH);
+        common::input::GridGeometry geometry;
+        BoardView view{geometry, common::input::ScreenRegion::EnemyWaters};
+        const auto drawnRow = [&]() {
+            const std::vector<std::string> rows = drawn(
+                view.render(
+                    board,
+                    core::Visibility::Opponent,
+                    common::availableThemes().front(),
+                    {}
+                ),
+                WINDOW_WIDTH,
+                3
+            );
+            return rows[1];
+        };
+
+        (void)board.attack({0, 0}, 1);
+        EXPECT_NE(drawnRow().find(" 2 "), std::string::npos);
+
+        (void)board.attack({0, 0}, 2);
+        EXPECT_NE(drawnRow().find(" 0 "), std::string::npos);
+
+        (void)board.attack({1, 0}, SEGMENT_HEALTH);
+        EXPECT_EQ(drawnRow().find(" 0 "), std::string::npos);
+        EXPECT_NE(drawnRow().find("✖"), std::string::npos);
+    }
 }  // namespace cpp_warships::head::tui
