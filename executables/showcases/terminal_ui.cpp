@@ -1,3 +1,4 @@
+#include <array>
 #include <cstddef>
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
@@ -6,144 +7,158 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
-using FieldMock = std::vector<std::vector<std::size_t>>;
+namespace {
+    enum class CellState {
+        Water,
+        Ship,
+        Hit,
+        Miss,
+    };
 
-enum class CellState : std::size_t {
-    Water = 0,
-    Ship = 1,
-    Hit = 2,
-    Miss = 3,
-};
+    using Field = std::vector<std::vector<CellState>>;
 
-auto cell_glyph(const CellState state) -> std::string {
-    switch (state) {
-        case CellState::Ship:
-            return "#";
-        case CellState::Hit:
-            return "X";
-        case CellState::Miss:
-            return "o";
-        case CellState::Water:
-        default:
-            return " ";
-    }
-}
+    constexpr std::size_t FIELD_SIZE = 10;
 
-auto draw_single_cell(const std::size_t value, const bool selected) -> ftxui::Element {
-    const auto glyph = cell_glyph(static_cast<CellState>(value));
+    /** @brief Which cell of a field the player has walked onto. */
+    struct Selection {
+        std::size_t row = 0;
+        std::size_t column = 0;
+    };
 
-    auto cell = ftxui::text(glyph) | ftxui::bold | ftxui::hcenter | ftxui::xflex |
-                ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1);
+    std::string glyphOf(const CellState state) {
+        static const std::map<CellState, std::string> GLYPHS = {
+            {CellState::Water, " "},
+            {CellState::Ship, "#"},
+            {CellState::Hit, "X"},
+            {CellState::Miss, "o"},
+        };
 
-    if (selected) {
-        cell = cell | ftxui::bgcolor(ftxui::Color::GrayDark);
+        return GLYPHS.at(state);
     }
 
-    return cell;
-}
+    ftxui::Element cellElement(const CellState state, const bool isSelected) {
+        ftxui::Element cell = ftxui::text(glyphOf(state)) | ftxui::bold | ftxui::hcenter |
+                              ftxui::xflex | ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1);
 
-struct Selection {
-    std::size_t row = 0;
-    std::size_t col = 0;
-};
+        return isSelected ? std::move(cell) | ftxui::bgcolor(ftxui::Color::GrayDark) : cell;
+    }
 
-auto draw_field(const FieldMock& field_state) -> ftxui::Component {
-    const std::size_t rows = field_state.size();
-    const std::size_t cols = rows == 0 ? 0 : field_state.front().size();
-
-    auto sel = std::make_shared<Selection>();
-    const FieldMock* field_state_copy = &field_state;
-
-    auto renderer = ftxui::Renderer([sel, field_state_copy, rows] {
-        std::vector<ftxui::Elements> elements(rows);
-        for (std::size_t i = 0; i < rows; ++i) {
-            for (std::size_t j = 0; j < (*field_state_copy)[i].size(); ++j) {
-                const bool selected = (i == sel->row && j == sel->col);
-                elements[i].push_back(draw_single_cell((*field_state_copy)[i][j], selected));
+    ftxui::Element fieldTable(const Field& field, const Selection& selection) {
+        std::vector<ftxui::Elements> rows(field.size());
+        for (std::size_t row = 0; row < field.size(); ++row) {
+            for (std::size_t column = 0; column < field[row].size(); ++column) {
+                const bool isSelected = row == selection.row && column == selection.column;
+                rows[row].push_back(cellElement(field[row][column], isSelected));
             }
         }
 
-        auto table = ftxui::Table(elements);
+        ftxui::Table table{rows};
         table.SelectAll().Border(ftxui::DOUBLE);
         table.SelectAll().SeparatorVertical(ftxui::LIGHT);
         table.SelectAll().SeparatorHorizontal(ftxui::LIGHT);
 
         return table.Render() | ftxui::xflex;
-    });
+    }
 
-    return ftxui::CatchEvent(renderer, [sel, rows, cols](const ftxui::Event& event) {
-        if (event == ftxui::Event::ArrowUp && sel->row > 0) {
-            --sel->row;
-        } else if (event == ftxui::Event::ArrowDown && sel->row + 1 < rows) {
-            ++sel->row;
-        } else if (event == ftxui::Event::ArrowLeft && sel->col > 0) {
-            --sel->col;
-        } else if (event == ftxui::Event::ArrowRight && sel->col + 1 < cols) {
-            ++sel->col;
-        } else {
+    /** @brief Moves @p selection one cell the way an arrow key points, when it stays on a field
+     * @p size cells across; whether the event was such an arrow. */
+    bool moveSelection(Selection& selection, const ftxui::Event& event, const std::size_t size) {
+        static const std::map<ftxui::Event, std::pair<int, int>> STEPS = {
+            {ftxui::Event::ArrowUp, {-1, 0}},
+            {ftxui::Event::ArrowDown, {1, 0}},
+            {ftxui::Event::ArrowLeft, {0, -1}},
+            {ftxui::Event::ArrowRight, {0, 1}},
+        };
+        const auto stepped = [size](const std::size_t from, const int by) {
+            const long long target = static_cast<long long>(from) + by;
+            const bool isOnField = target >= 0 && target < static_cast<long long>(size);
+            return isOnField ? static_cast<std::size_t>(target) : from;
+        };
+
+        const auto step = STEPS.find(event);
+        if (step == STEPS.end()) {
             return false;
         }
+
+        selection.row = stepped(selection.row, step->second.first);
+        selection.column = stepped(selection.column, step->second.second);
         return true;
-    });
-}
+    }
+
+    ftxui::Component fieldComponent(const Field& field) {
+        auto selection = std::make_shared<Selection>();
+        const Field* shown = &field;
+
+        const auto draw = [selection, shown] { return fieldTable(*shown, *selection); };
+        const auto steer = [selection, shown](const ftxui::Event& event) {
+            return moveSelection(*selection, event, shown->size());
+        };
+
+        return ftxui::CatchEvent(ftxui::Renderer(draw), steer);
+    }
+
+    Field fieldWith(
+        const std::vector<std::pair<std::pair<std::size_t, std::size_t>, CellState>>& cells
+    ) {
+        Field field(FIELD_SIZE, std::vector<CellState>(FIELD_SIZE, CellState::Water));
+        for (const auto& [position, state] : cells) {
+            field[position.first][position.second] = state;
+        }
+
+        return field;
+    }
+
+    bool isQuit(const ftxui::Event& event) {
+        return event == ftxui::Event::Escape || (event.is_character() && event.character() == "q");
+    }
+}  // namespace
 
 int main() {
-    const std::size_t field_size = 10;
-    std::vector<std::vector<std::size_t>> field =
-        std::vector(field_size, std::vector<std::size_t>(field_size, 0));
-
-    field[2][3] = static_cast<std::size_t>(CellState::Ship);
-    field[2][4] = static_cast<std::size_t>(CellState::Ship);
-    field[2][5] = static_cast<std::size_t>(CellState::Hit);
-    field[5][7] = static_cast<std::size_t>(CellState::Hit);
-    field[6][1] = static_cast<std::size_t>(CellState::Miss);
-    field[8][8] = static_cast<std::size_t>(CellState::Miss);
-
-    std::vector<std::vector<std::size_t>> field2 =
-        std::vector(field_size, std::vector<std::size_t>(field_size, 0));
-
-    field2[4][3] = static_cast<std::size_t>(CellState::Ship);
-    field2[5][3] = static_cast<std::size_t>(CellState::Ship);
-    field2[6][3] = static_cast<std::size_t>(CellState::Ship);
-    field2[1][2] = static_cast<std::size_t>(CellState::Hit);
-    field2[7][8] = static_cast<std::size_t>(CellState::Hit);
-    field2[8][8] = static_cast<std::size_t>(CellState::Hit);
-    field2[9][0] = static_cast<std::size_t>(CellState::Miss);
-    field2[4][4] = static_cast<std::size_t>(CellState::Miss);
-
-    auto screen = ftxui::ScreenInteractive::TerminalOutput();
-
-    auto field1_component = draw_field(field);
-    auto field2_component = draw_field(field2);
-
-    auto active_board = std::make_shared<int>(0);
-
-    auto renderer = ftxui::Renderer([&] {
-        return ftxui::hbox({
-            field1_component->Render(),
-            ftxui::separator(),
-            field2_component->Render(),
-        });
+    const Field ownField = fieldWith({
+        {{2, 3}, CellState::Ship},
+        {{2, 4}, CellState::Ship},
+        {{2, 5}, CellState::Hit},
+        {{5, 7}, CellState::Hit},
+        {{6, 1}, CellState::Miss},
+        {{8, 8}, CellState::Miss},
+    });
+    const Field enemyField = fieldWith({
+        {{4, 3}, CellState::Ship},
+        {{5, 3}, CellState::Ship},
+        {{6, 3}, CellState::Ship},
+        {{1, 2}, CellState::Hit},
+        {{7, 8}, CellState::Hit},
+        {{8, 8}, CellState::Hit},
+        {{9, 0}, CellState::Miss},
+        {{4, 4}, CellState::Miss},
     });
 
-    const auto root = ftxui::CatchEvent(renderer, [&](const ftxui::Event& event) {
+    auto screen = ftxui::ScreenInteractive::TerminalOutput();
+    const std::array<ftxui::Component, 2> fields{
+        fieldComponent(ownField),
+        fieldComponent(enemyField)
+    };
+    std::size_t activeField = 0;
+
+    const auto draw = [&fields] {
+        return ftxui::hbox({fields[0]->Render(), ftxui::separator(), fields[1]->Render()});
+    };
+    const auto route = [&](const ftxui::Event& event) {
         if (event == ftxui::Event::Tab) {
-            *active_board = 1 - *active_board;
+            activeField = 1 - activeField;
             return true;
-        } else if (
-            event == ftxui::Event::Escape || (event.is_character() && event.character() == "q")
-        ) {
+        }
+        if (isQuit(event)) {
             screen.Exit();
             return true;
         }
 
-        const auto& target = *active_board == 0 ? field1_component : field2_component;
-        return target->OnEvent(event);
-    });
+        return fields[activeField]->OnEvent(event);
+    };
 
-    screen.Loop(root);
-
+    screen.Loop(ftxui::CatchEvent(ftxui::Renderer(draw), route));
     return 0;
 }

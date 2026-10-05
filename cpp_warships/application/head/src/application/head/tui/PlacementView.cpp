@@ -200,7 +200,7 @@ namespace cpp_warships::head::tui {
             context_,
             SCREEN,
             sectionHeading(theme, "KEYS"),
-            keyLegend(theme, legend(plan), hotspots_)
+            keyLegend(theme, legend(plan), hotspots_, !context_.state().isKeyboardLayoutFree)
         );
 
         ftxui::Element body =

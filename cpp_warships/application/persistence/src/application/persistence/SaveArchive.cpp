@@ -8,6 +8,7 @@
 #include <ctime>
 #include <exception>
 #include <iomanip>
+#include <map>
 #include <nlohmann/json.hpp>
 #include <random>
 #include <sstream>
@@ -59,6 +60,29 @@ namespace cpp_warships::persistence {
             return serializer;
         }
 
+        /** @brief The meta block an older save never wrote, rebuilt from the name it kept beside
+         * the match and the time its id was made at. */
+        [[nodiscard]] std::optional<nlohmann::json> legacyMetaOf(
+            const nlohmann::json& document,
+            const std::string& id
+        ) {
+            if (!document.contains(NAME_KEY)) {
+                return std::nullopt;
+            }
+
+            return nlohmann::json{
+                {UUID_KEY, id},
+                {TIMESTAMP_KEY, timestampOfLegacyId(id)},
+                {NAME_KEY, document[NAME_KEY]}
+            };
+        }
+
+        /** @brief The match a save holds: under its data block, or at the top level of an older
+         * save that had no blocks at all. */
+        [[nodiscard]] const nlohmann::json& matchDocumentOf(const nlohmann::json& document) {
+            return document.contains(DATA_KEY) ? document.at(DATA_KEY) : document;
+        }
+
         /** @brief The meta block of the save called @p id, or nothing when it
          * cannot be read. */
         [[nodiscard]] std::optional<nlohmann::json> metaOf(
@@ -76,20 +100,10 @@ namespace cpp_warships::persistence {
                     return document[META_KEY];
                 }
 
-                // A save of the older shape kept the name beside the match and nothing else,
-                // so its meta block is put together from what there is.
-                if (document.contains(NAME_KEY)) {
-                    return nlohmann::json{
-                        {UUID_KEY, id},
-                        {TIMESTAMP_KEY, timestampOfLegacyId(id)},
-                        {NAME_KEY, document[NAME_KEY]}
-                    };
-                }
+                return legacyMetaOf(document, id);
             } catch (const std::exception&) {
                 return std::nullopt;
             }
-
-            return std::nullopt;
         }
 
         /** @brief Reads @p key of @p meta as text, or nothing when it is not there. */
@@ -138,7 +152,6 @@ namespace cpp_warships::persistence {
 
     std::string SaveArchive::newSaveId() {
         static constexpr const char* HEX_DIGITS = "0123456789abcdef";
-        static constexpr int UUID_VERSION = 4;
         static constexpr int UUID_VARIANT_LOW = 8;
         static constexpr int UUID_VARIANT_HIGH = 11;
 
@@ -147,15 +160,18 @@ namespace cpp_warships::persistence {
         std::uniform_int_distribution<int> anyDigit{0, 15};
         std::uniform_int_distribution<int> variantDigit{UUID_VARIANT_LOW, UUID_VARIANT_HIGH};
 
+        std::map<char, std::uniform_int_distribution<int>*> digitsByPlaceholder{
+            {'x', &anyDigit},
+            {'y', &variantDigit},
+        };
+
         std::string written = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx";
         for (char& position : written) {
-            if (position == 'x') {
-                position = HEX_DIGITS[anyDigit(engine)];
-            } else if (position == 'y') {
-                position = HEX_DIGITS[variantDigit(engine)];
+            const auto digits = digitsByPlaceholder.find(position);
+            if (digits != digitsByPlaceholder.end()) {
+                position = HEX_DIGITS[(*digits->second)(engine)];
             }
         }
-        written[14] = HEX_DIGITS[UUID_VERSION];
 
         return written;
     }
@@ -215,11 +231,7 @@ namespace cpp_warships::persistence {
             serializers::MatchSnapshotJsonSerializer serializer = makeSnapshotSerializer();
             try {
                 const nlohmann::json document = nlohmann::json::parse(*contents);
-
-                // A save of the older shape holds the match at the top level rather than
-                // under a data block, so it is read as it stands.
-                const bool isWrapped = document.contains(DATA_KEY);
-                snapshot = serializer.deserialize(isWrapped ? document.at(DATA_KEY) : document);
+                snapshot = serializer.deserialize(matchDocumentOf(document));
             } catch (const std::exception&) {
                 snapshot = std::nullopt;
             }

@@ -61,6 +61,14 @@ namespace cpp_warships::platform {
         return environmentValue("USERPROFILE");
     }
 
+    bool hostTranslatesKeyboardLayouts() {
+#ifdef __EMSCRIPTEN__
+        return true;
+#else
+        return false;
+#endif
+    }
+
     void prepareConsoleForUnicode() {
 #ifdef _WIN32
         std::system("chcp 65001");

@@ -27,7 +27,9 @@ add_library(cxx_setup INTERFACE)
 
 # General compiler options
 if (MSVC)
-    target_compile_options(cxx_setup INTERFACE /W4 /WX /permissive-)
+    # /utf-8: sources hold UTF-8 glyphs and letters, which MSVC would otherwise read in the
+    # system code page, garbling them and warning (C4819) on bytes that page cannot hold.
+    target_compile_options(cxx_setup INTERFACE /W4 /WX /permissive- /utf-8)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(cxx_setup INTERFACE -Wall -Wextra -Wpedantic)
 endif()

@@ -63,6 +63,28 @@ namespace cpp_warships::head::tui {
             ftxui::Box& recordedBox_;
         };
 
+        /** @brief Asks for less height than its one child would, and passes on whatever it gets. */
+        class ModestHeightNode final : public ftxui::Node {
+        public:
+            ModestHeightNode(ftxui::Element child, const int lines)
+                : ftxui::Node(ftxui::Elements{std::move(child)})
+                , lines_(lines) {}
+
+            void ComputeRequirement() override {
+                children_[0]->ComputeRequirement();
+                requirement_ = children_[0]->requirement();
+                requirement_.min_y = std::min(requirement_.min_y, lines_);
+            }
+
+            void SetBox(ftxui::Box box) override {
+                ftxui::Node::SetBox(box);
+                children_[0]->SetBox(box);
+            }
+
+        private:
+            int lines_;
+        };
+
         /** @brief Lays its one child out at full size behind a smaller window, slid along by
          * however far it is scrolled, and paints only what the window shows. */
         class ScrollableNode final : public ftxui::Node {
@@ -211,6 +233,12 @@ namespace cpp_warships::head::tui {
     ftxui::Decorator reflectWholeBox(ftxui::Box& box) {
         return [&box](ftxui::Element child) -> ftxui::Element {
             return std::make_shared<WholeBoxNode>(std::move(child), box);
+        };
+    }
+
+    ftxui::Decorator heightAskedAtMost(const int lines) {
+        return [lines](ftxui::Element child) -> ftxui::Element {
+            return std::make_shared<ModestHeightNode>(std::move(child), lines);
         };
     }
 

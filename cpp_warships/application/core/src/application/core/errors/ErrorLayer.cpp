@@ -1,20 +1,18 @@
 #include <application/core/errors/ErrorLayer.h>
 
+#include <map>
+
 namespace cpp_warships::core::errors {
     std::string_view nameOf(const ErrorLayer layer) noexcept {
-        switch (layer) {
-            case ErrorLayer::Core:
-                return "core";
-            case ErrorLayer::Flow:
-                return "flow";
-            case ErrorLayer::Persistence:
-                return "persistence";
-            case ErrorLayer::Model:
-                return "model";
-            case ErrorLayer::Presentation:
-                return "presentation";
-        }
+        static const std::map<ErrorLayer, std::string_view> NAMES = {
+            {ErrorLayer::Core, "core"},
+            {ErrorLayer::Flow, "flow"},
+            {ErrorLayer::Persistence, "persistence"},
+            {ErrorLayer::Model, "model"},
+            {ErrorLayer::Presentation, "presentation"},
+        };
 
-        return "unknown";
+        const auto name = NAMES.find(layer);
+        return name == NAMES.end() ? "unknown" : name->second;
     }
 }  // namespace cpp_warships::core::errors

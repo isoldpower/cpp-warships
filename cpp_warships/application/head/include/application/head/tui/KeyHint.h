@@ -45,10 +45,11 @@ namespace cpp_warships::head::tui {
 
     /** @brief A block of key hints, held clear of the edges of whatever contains it, and
      *  closed by the keys that move between panels and scroll them, which work everywhere.
-     *  Notes in @p hotspots where each hint landed. */
+     *  Notes in @p hotspots where each hint landed, and warns when @p needsLatinLayout. */
     [[nodiscard]] ftxui::Element keyLegend(
         const common::Theme& theme,
         std::vector<KeyHint> hints,
-        KeyHotspots& hotspots
+        KeyHotspots& hotspots,
+        bool needsLatinLayout
     );
 }  // namespace cpp_warships::head::tui

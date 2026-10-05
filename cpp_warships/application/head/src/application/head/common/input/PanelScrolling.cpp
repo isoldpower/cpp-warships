@@ -3,6 +3,7 @@
 #include <application/head/common/state/BattleState.h>
 
 #include <algorithm>
+#include <compare>
 #include <limits>
 #include <map>
 #include <utility>
@@ -12,56 +13,72 @@ namespace cpp_warships::head::common::input {
         /** @brief How far a panel scrolls when nothing says where its content ends. */
         constexpr int UNBOUNDED_SCROLL = std::numeric_limits<int>::max() / 2;
 
-        /** @brief How far apart two spans are, or nothing when they overlap. */
-        [[nodiscard]] int gapBetween(
-            const int firstStart,
-            const int firstEnd,
-            const int secondStart,
-            const int secondEnd
-        ) {
-            return std::max(0, std::max(firstStart, secondStart) - std::min(firstEnd, secondEnd));
+        /** @brief The first and last row, or column, a panel's window covers. */
+        struct Span {
+            int first = 0;
+            int last = 0;
+        };
+
+        [[nodiscard]] Span columnsOf(const PanelExtent& extent) {
+            return {.first = extent.left, .last = extent.left + extent.width - 1};
         }
 
-        /** @brief How far @p candidate lies from @p from in @p direction, along it and across it,
-         * or nothing when it does not lie that way at all. */
-        [[nodiscard]] std::optional<std::pair<int, int>> distanceTowards(
+        [[nodiscard]] Span rowsOf(const PanelExtent& extent) {
+            return {.first = extent.top, .last = extent.top + extent.height - 1};
+        }
+
+        /** @brief How far apart two spans are, or nothing when they overlap. */
+        [[nodiscard]] int gapBetween(const Span first, const Span second) {
+            return std::max(
+                0,
+                std::max(first.first, second.first) - std::min(first.last, second.last)
+            );
+        }
+
+        /** @brief Which way a focus move runs: along columns or rows, towards the end or the start.
+         */
+        struct Heading {
+            bool isAlongColumns = false;
+            bool isForward = false;
+        };
+
+        /** @brief How far a candidate lies off the line of a move, then how far down it; the
+         * nearer is the one less off the line, then the one less far. */
+        struct Remoteness {
+            int sideways = 0;
+            int ahead = 0;
+
+            auto operator<=>(const Remoteness&) const = default;
+        };
+
+        /** @brief How far @p candidate lies from @p from in @p direction, or nothing when it does
+         * not lie that way at all. */
+        [[nodiscard]] std::optional<Remoteness> remotenessTowards(
             const PanelExtent& from,
             const PanelExtent& candidate,
             const FocusDirection direction
         ) {
-            const int fromRight = from.left + from.width - 1;
-            const int fromBottom = from.top + from.height - 1;
-            const int candidateRight = candidate.left + candidate.width - 1;
-            const int candidateBottom = candidate.top + candidate.height - 1;
+            static const std::map<FocusDirection, Heading> HEADINGS = {
+                {FocusDirection::Right, {.isAlongColumns = true, .isForward = true}},
+                {FocusDirection::Left, {.isAlongColumns = true, .isForward = false}},
+                {FocusDirection::Down, {.isAlongColumns = false, .isForward = true}},
+                {FocusDirection::Up, {.isAlongColumns = false, .isForward = false}},
+            };
 
-            const int acrossRows = gapBetween(from.top, fromBottom, candidate.top, candidateBottom);
-            const int acrossColumns =
-                gapBetween(from.left, fromRight, candidate.left, candidateRight);
+            const Heading heading = HEADINGS.at(direction);
+            const auto along = heading.isAlongColumns ? columnsOf : rowsOf;
+            const auto across = heading.isAlongColumns ? rowsOf : columnsOf;
 
-            switch (direction) {
-                case FocusDirection::Right:
-                    if (candidate.left <= fromRight) {
-                        return std::nullopt;
-                    }
-                    return std::pair{acrossRows, candidate.left - fromRight};
-                case FocusDirection::Left:
-                    if (candidateRight >= from.left) {
-                        return std::nullopt;
-                    }
-                    return std::pair{acrossRows, from.left - candidateRight};
-                case FocusDirection::Down:
-                    if (candidate.top <= fromBottom) {
-                        return std::nullopt;
-                    }
-                    return std::pair{acrossColumns, candidate.top - fromBottom};
-                case FocusDirection::Up:
-                    if (candidateBottom >= from.top) {
-                        return std::nullopt;
-                    }
-                    return std::pair{acrossColumns, from.top - candidateBottom};
+            const int ahead = heading.isForward ? along(candidate).first - along(from).last
+                                                : along(from).first - along(candidate).last;
+            if (ahead <= 0) {
+                return std::nullopt;
             }
 
-            return std::nullopt;
+            return Remoteness{
+                .sideways = gapBetween(across(from), across(candidate)),
+                .ahead = ahead
+            };
         }
 
         [[nodiscard]] state::ScrollOffset furthestScrollOf(
@@ -241,17 +258,19 @@ namespace cpp_warships::head::common::input {
         }
 
         std::optional<ScreenRegion> nearest;
-        std::pair<int, int> nearestDistance;
+        Remoteness nearestRemoteness;
         for (const ScreenRegion candidate : panelsOf(screen)) {
             const std::optional<PanelExtent> extent = geometry.panelOf(candidate);
             if (candidate == from || !extent.has_value() || !isShown(*extent)) {
                 continue;
             }
 
-            const auto distance = distanceTowards(*origin, *extent, direction);
-            if (distance.has_value() && (!nearest.has_value() || *distance < nearestDistance)) {
+            const std::optional<Remoteness> remoteness =
+                remotenessTowards(*origin, *extent, direction);
+            if (remoteness.has_value() &&
+                (!nearest.has_value() || *remoteness < nearestRemoteness)) {
                 nearest = candidate;
-                nearestDistance = *distance;
+                nearestRemoteness = *remoteness;
             }
         }
 

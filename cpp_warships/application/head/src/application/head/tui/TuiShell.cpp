@@ -1,5 +1,6 @@
 #include <application/head/common/PresentationContext.h>
 #include <application/head/common/input/EventPipeline.h>
+#include <application/head/common/input/KeyCodes.h>
 #include <application/head/common/render/RendererSet.h>
 #include <application/head/tui/FtxuiPalette.h>
 #include <application/head/tui/FtxuiView.h>
@@ -12,6 +13,7 @@
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/screen/terminal.hpp>
 #include <iostream>
+#include <string_view>
 #include <utility>
 
 namespace cpp_warships::head::tui {
@@ -24,6 +26,15 @@ namespace cpp_warships::head::tui {
             }
 
             std::cout << "\033[?1049h\033[2J\033[H" << std::flush;
+        }
+
+        /** @brief Writes @p sequence to the terminal, when there is one to hear it. */
+        void tellTerminal(const std::string_view sequence) {
+            if (!platform::isOutputTerminal()) {
+                return;
+            }
+
+            std::cout << sequence << std::flush;
         }
     }  // namespace
 
@@ -38,6 +49,9 @@ namespace cpp_warships::head::tui {
         const common::host::SessionFinishedQuery& isFinished
     ) {
         blankAlternateScreen();
+        tellTerminal(common::input::KEY_CODES_REQUEST);
+        tellTerminal(common::input::KEY_CODES_QUERY);
+        context.state().isKeyboardLayoutFree = platform::hostTranslatesKeyboardLayouts();
 
         const auto renderActiveScreen = [&context, &renderers] {
             const auto [dimx, dimy] = ftxui::Terminal::Size();
@@ -47,17 +61,33 @@ namespace cpp_warships::head::tui {
             return elementOfFrame(frame) | bgcolor(context.theme().background);
         };
 
-        const auto routeEvent = [this, &pipeline, &isFinished](const ftxui::Event& event) {
-            pipeline.offer(keystrokeOf(event));
-            const bool isClaimed = pipeline.settle();
+        const auto routeEvent =
+            [this, &context, &pipeline, &isFinished](const ftxui::Event& event) {
+                if (common::input::isKeyCodesAnswer(event.input())) {
+                    context.state().isKeyboardLayoutFree = true;
+                    return true;
+                }
+                if (common::input::keystrokeOfKeyCode(event.input()).has_value()) {
+                    context.state().isKeyboardLayoutFree = true;
+                }
 
-            if (isFinished()) {
-                interactiveScreen_.Exit();
-            }
+                const common::input::Keystroke stroke = keystrokeOf(event);
+                if (stroke.key == common::input::Key::Interrupt) {
+                    interactiveScreen_.PostEvent(ftxui::Event::CtrlC);
+                    return true;
+                }
 
-            return isClaimed;
-        };
+                pipeline.offer(stroke);
+                const bool isClaimed = pipeline.settle();
+
+                if (isFinished()) {
+                    interactiveScreen_.Exit();
+                }
+
+                return isClaimed;
+            };
 
         interactiveScreen_.Loop(ftxui::CatchEvent(ftxui::Renderer(renderActiveScreen), routeEvent));
+        tellTerminal(common::input::KEY_CODES_RELEASE);
     }
 }  // namespace cpp_warships::head::tui

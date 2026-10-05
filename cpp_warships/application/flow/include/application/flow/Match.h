@@ -27,12 +27,12 @@ namespace cpp_warships::flow {
     struct MatchRestoreState {
         core::Board playerBoard;
         core::Board computerBoard;
-        std::deque<SkillKind> bankedSkills;
+        std::deque<SkillKind> bankedSkills{};
         int roundNumber = 1;
         MatchPhase phase = MatchPhase::Placement;
         Participant currentTurn = Participant::Player;
         bool isDoubleDamageArmed = false;
-        AiMemory opponentMemory;
+        AiMemory opponentMemory{};
     };
 
     /** @brief A game in progress: two boards, whose turn it is and what has happened.

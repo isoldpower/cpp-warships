@@ -48,6 +48,15 @@ namespace cpp_warships::head::tui {
                 return context_;
             }
 
+            /** @brief Fires at every cell of the enemy's waters in turn, filling the log. */
+            void fireAtEveryCell() {
+                for (int row = 0; row < BOARD_SIZE; ++row) {
+                    for (int column = 0; column < BOARD_SIZE; ++column) {
+                        game_.play().fireAt(core::Coordinate{column, row});
+                    }
+                }
+            }
+
         private:
             flow::RandomEngine randomEngine_{17U};
             persistence::MemorySaveStorage storage_;
@@ -370,5 +379,36 @@ namespace cpp_warships::head::tui {
         (void)board.attack({1, 0}, SEGMENT_HEALTH);
         EXPECT_EQ(drawnRow().find(" 0 "), std::string::npos);
         EXPECT_NE(drawnRow().find("✖"), std::string::npos);
+    }
+
+    TEST(BattleLayoutTests, ALongLogNeverCrowdsTheOtherSideBarPanelsOut) {
+        BattleFixture fixture;
+        fixture.fireAtEveryCell();
+        BattleView view{fixture.context(), fixture.context().geometry()};
+
+        const std::vector<std::string> rows = rowsOf(view.render(LAPTOP_LAYOUT_COLUMNS + 20, 40));
+
+        const std::optional<common::input::PanelExtent> shortcuts =
+            fixture.context().geometry().panelOf(common::input::ScreenRegion::Shortcuts);
+        const std::optional<common::input::PanelExtent> story =
+            fixture.context().geometry().panelOf(common::input::ScreenRegion::Log);
+        ASSERT_TRUE(shortcuts.has_value());
+        ASSERT_TRUE(story.has_value());
+        EXPECT_EQ(shortcuts->height, shortcuts->contentHeight);
+        EXPECT_GT(story->contentHeight, story->height);
+        EXPECT_NE(rowHolding(rows, "back to the menu"), -1);
+    }
+
+    TEST(KeyHintTests, AsksForTheAbcLayoutOnlyWhereKeysDependOnIt) {
+        BattleFixture fixture;
+        MenuView view{fixture.context(), fixture.context().geometry()};
+
+        fixture.context().state().isKeyboardLayoutFree = false;
+        const std::vector<std::string> warned = rowsOf(view.render(120, 40));
+        fixture.context().state().isKeyboardLayoutFree = true;
+        const std::vector<std::string> trusted = rowsOf(view.render(120, 40));
+
+        EXPECT_NE(rowHolding(warned, "keys need the ABC layout"), -1);
+        EXPECT_EQ(rowHolding(trusted, "keys need the ABC layout"), -1);
     }
 }  // namespace cpp_warships::head::tui

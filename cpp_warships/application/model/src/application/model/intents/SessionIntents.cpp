@@ -2,6 +2,8 @@
 #include <application/model/behaviors/SaveBehavior.h>
 #include <application/model/intents/SessionIntents.h>
 
+#include <map>
+#include <string>
 #include <utility>
 
 namespace cpp_warships::model::intents {
@@ -14,16 +16,20 @@ namespace cpp_warships::model::intents {
     }
 
     IntentResult SaveMatchIntent::apply() const {
-        switch (saves_.saveMatch(name_)) {
-            case behaviors::SaveOutcome::Saved:
-                return IntentResult::succeeded();
-            case behaviors::SaveOutcome::NoMatchInPlay:
-                return IntentResult::failed("there is no match to save");
-            case behaviors::SaveOutcome::CouldNotWrite:
-                return IntentResult::failed("the save could not be written");
+        static const std::map<behaviors::SaveOutcome, std::string> FAILURES = {
+            {behaviors::SaveOutcome::NoMatchInPlay, "there is no match to save"},
+            {behaviors::SaveOutcome::CouldNotWrite, "the save could not be written"},
+        };
+
+        const behaviors::SaveOutcome outcome = saves_.saveMatch(name_);
+        if (outcome == behaviors::SaveOutcome::Saved) {
+            return IntentResult::succeeded();
         }
 
-        return IntentResult::failed("the match could not be saved");
+        const auto failure = FAILURES.find(outcome);
+        return IntentResult::failed(
+            failure == FAILURES.end() ? "the match could not be saved" : failure->second
+        );
     }
 
     LoadMatchIntent::LoadMatchIntent(behaviors::SaveBehavior& saves, std::string slot) noexcept

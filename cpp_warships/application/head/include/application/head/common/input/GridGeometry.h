@@ -127,12 +127,10 @@ namespace cpp_warships::head::common::input {
          * its panel left showing. */
         [[nodiscard]] bool isShowing(ScreenRegion region, int screenX, int screenY) const;
 
+        /** @brief Where the board of @p region was drawn, or an unknown patch when it was not. */
         [[nodiscard]] const Patch& patchFor(ScreenRegion region) const;
-        [[nodiscard]] Patch& patchFor(ScreenRegion region);
 
-        Patch ownWaters_;
-        Patch enemyWaters_;
-        Patch elsewhere_;
+        std::map<ScreenRegion, Patch> boards_;
         std::map<ScreenRegion, PanelExtent> panels_;
         std::set<ScreenRegion> foldable_;
         std::vector<KeyHotspot> hotspots_;

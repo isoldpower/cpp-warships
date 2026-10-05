@@ -14,6 +14,12 @@ namespace cpp_warships::head::plain {
     namespace {
         const std::string PROMPT = "> ";
 
+        /** @brief Whether @p command is a lone space: a name may hold one, so it is a keystroke
+         * of its own rather than a blank line asking for Enter. */
+        [[nodiscard]] bool isTypedSpace(const std::string& command) {
+            return command == " ";
+        }
+
         /** @brief The typed word stripped of surrounding blanks and folded to
          * lower case, so that "  Up " and "up" ask for the same thing. */
         [[nodiscard]] std::string normalised(const std::string& command) {
@@ -24,9 +30,7 @@ namespace cpp_warships::head::plain {
                 return static_cast<char>(std::tolower(letter));
             };
 
-            // A space is a name the player may want to type, so it is a keystroke of its
-            // own rather than a blank line asking for Enter.
-            if (command == " ") {
+            if (isTypedSpace(command)) {
                 return command;
             }
 

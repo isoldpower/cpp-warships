@@ -36,7 +36,9 @@ if (EMSCRIPTEN)
     target_link_options(cpp_warships
             PRIVATE -pthread
             PRIVATE -sPROXY_TO_PTHREAD=1
-            PRIVATE -sALLOW_MEMORY_GROWTH=1
+            # A fixed heap, not a growing one: growth with threads slows every access the page
+            # makes to memory, and the game needs far less than this.
+            PRIVATE -sINITIAL_MEMORY=64MB
             PRIVATE -sEXIT_RUNTIME=1
             PRIVATE -sMODULARIZE=1
             PRIVATE -sEXPORT_ES6=1

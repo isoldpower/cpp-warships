@@ -47,7 +47,7 @@ namespace cpp_warships::head::common::input {
         const int columnPitch,
         const int rowPitch
     ) {
-        patchFor(region) = Patch{
+        boards_[region] = Patch{
             .isKnown = true,
             .left = left,
             .top = top,
@@ -103,8 +103,7 @@ namespace cpp_warships::head::common::input {
     }
 
     void GridGeometry::clear() noexcept {
-        ownWaters_ = Patch{};
-        enemyWaters_ = Patch{};
+        boards_.clear();
         panels_.clear();
         foldable_.clear();
         hotspots_.clear();
@@ -187,20 +186,8 @@ namespace cpp_warships::head::common::input {
     }
 
     const GridGeometry::Patch& GridGeometry::patchFor(const ScreenRegion region) const {
-        switch (region) {
-            case ScreenRegion::OwnWaters:
-                return ownWaters_;
-            case ScreenRegion::EnemyWaters:
-                return enemyWaters_;
-            default:
-                break;
-        }
-
-        return elsewhere_;
-    }
-
-    GridGeometry::Patch& GridGeometry::patchFor(const ScreenRegion region) {
-        const GridGeometry& self = *this;
-        return const_cast<Patch&>(self.patchFor(region));
+        static const Patch UNKNOWN{};
+        const auto patch = boards_.find(region);
+        return patch == boards_.end() ? UNKNOWN : patch->second;
     }
 }  // namespace cpp_warships::head::common::input

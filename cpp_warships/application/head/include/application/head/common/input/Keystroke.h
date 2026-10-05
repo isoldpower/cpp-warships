@@ -24,6 +24,8 @@ namespace cpp_warships::head::common::input {
         ShiftArrowLeft,
         ShiftArrowRight,
 
+        Interrupt,
+
         Pointer,
     };
 
@@ -44,7 +46,7 @@ namespace cpp_warships::head::common::input {
         Key key = Key::None;
 
         /** @brief What was typed, when a plain character was. */
-        std::string character;
+        std::string character{};
 
         PointerButton button = PointerButton::None;
         bool isPressed = false;

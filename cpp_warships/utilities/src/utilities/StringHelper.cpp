@@ -23,20 +23,34 @@ std::vector<std::string> StringHelper::split(const std::string& initial, char de
     return elems;
 }
 
-std::string StringHelper::patternCoordinate(int fieldSize) {
-    std::string pattern;
-    if (fieldSize < 10 || fieldSize > 26) {
-        throw std::invalid_argument("Method functions support field size from 10 to 25");
+namespace {
+    constexpr int SMALLEST_DESCRIBED_FIELD = 10;
+    constexpr int LARGEST_DESCRIBED_FIELD = 26;
+    constexpr int DIGITS_PER_TEN = 10;
+
+    /** @brief A pattern for one coordinate on a field @p fieldSize wide: any single digit, every
+     * full ten below the field's own, then that ten up to the field's last digit. */
+    std::string numberPattern(const int fieldSize) {
+        const int highestTen = fieldSize / DIGITS_PER_TEN;
+        std::string pattern = "([0-9]";
+
+        for (int ten = 1; ten < highestTen; ++ten) {
+            pattern += "|" + std::to_string(ten) + "[0-9]";
+        }
+        pattern += "|" + std::to_string(highestTen) + "[0-" +
+                   std::to_string(fieldSize % DIGITS_PER_TEN) + "])";
+
+        return pattern;
     }
-    if (fieldSize < 20) {
-        pattern = "^([0-9]|1[0-" + std::to_string(fieldSize % 10) + "])\\,([0-9]|1[0-" +
-                  std::to_string(fieldSize % 10) + "])$";
-    } else if (fieldSize - 1 < 26) {
-        pattern = "^([0-9]|1[0-9]|2[0-" + std::to_string(fieldSize % 10) +
-                  "])\\,([0-9]|1[0-9]|2[0-" + std::to_string(fieldSize % 10) + "])$";
+}  // namespace
+
+std::string StringHelper::patternCoordinate(int fieldSize) {
+    if (fieldSize < SMALLEST_DESCRIBED_FIELD || fieldSize > LARGEST_DESCRIBED_FIELD) {
+        throw std::invalid_argument("Method functions support field size from 10 to 26");
     }
 
-    return pattern;
+    const std::string number = numberPattern(fieldSize);
+    return "^" + number + "\\," + number + "$";
 }
 
 std::string StringHelper::toLower(const std::string& input) {

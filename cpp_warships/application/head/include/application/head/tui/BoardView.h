@@ -27,9 +27,9 @@ namespace cpp_warships::head::tui {
     /** @brief What is drawn on top of a board: where the cursor rests and which cells are
      * marked. */
     struct BoardOverlay {
-        std::optional<core::Coordinate> cursor;
-        std::unordered_set<core::Coordinate> marked;
-        common::CellColors markColors;
+        std::optional<core::Coordinate> cursor{};
+        std::unordered_set<core::Coordinate> marked{};
+        common::CellColors markColors{};
     };
 
     /** @brief Draws a board as a labelled grid and remembers where that grid landed. */

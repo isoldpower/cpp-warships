@@ -82,7 +82,12 @@ namespace cpp_warships::head::tui {
                      context_,
                      SCREEN,
                      sectionHeading(theme, "KEYS"),
-                     keyLegend(theme, std::move(hints), hotspots_)
+                     keyLegend(
+                         theme,
+                         std::move(hints),
+                         hotspots_,
+                         !context_.state().isKeyboardLayoutFree
+                     )
                  ),
                  noticeBlock(theme, context_.application())}
             ),

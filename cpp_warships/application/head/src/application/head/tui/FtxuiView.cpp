@@ -1,3 +1,4 @@
+#include <application/head/common/input/KeyCodes.h>
 #include <application/head/tui/FtxuiPalette.h>
 #include <application/head/tui/FtxuiView.h>
 
@@ -5,6 +6,7 @@
 #include <ftxui/dom/node.hpp>
 #include <ftxui/screen/screen.hpp>
 #include <map>
+#include <optional>
 #include <utility>
 
 namespace cpp_warships::head::tui {
@@ -117,6 +119,12 @@ namespace cpp_warships::head::tui {
                 .pointerY = mouse.y,
                 .isShiftHeld = mouse.shift
             };
+        }
+
+        const std::optional<common::input::Keystroke> coded =
+            common::input::keystrokeOfKeyCode(event.input());
+        if (coded.has_value()) {
+            return *coded;
         }
 
         return common::input::Keystroke{

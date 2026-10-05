@@ -18,6 +18,10 @@ namespace cpp_warships::head::common::state {
         SaveNamingState naming;
         PanelState panels;
 
+        /** @brief Whether shortcuts reach the game by key position in any keyboard language:
+         * the terminal answered that it reports key codes, or the host translates layouts. */
+        bool isKeyboardLayoutFree = false;
+
         /** @brief Whether the player has stepped out to the menu. */
         bool isAtMenu = true;
 

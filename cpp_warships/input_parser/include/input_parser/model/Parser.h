@@ -101,19 +101,22 @@ namespace cpp_warships::input_parser::model {
 
             for (size_t i = 0; i < inputChunks.size(); i++) {
                 const std::string& chunk = inputChunks[i];
-                if (chunk.substr(0, 2) == "--") {
-                    ParserParameter option;
-                    if (findOption(chunk, command, option)) {
-                        std::string optionValue =
-                            i == inputChunks.size() - 1 ? "" : inputChunks[i + 1];
-                        std::pair<bool, std::string> validationResult =
-                            option.validate(optionValue);
-                        isValid = isValid && validationResult.first;
-                        if (isValid)
-                            validParamValues.emplace(chunk.substr(2), validationResult.second);
-                    } else if (command.getResolveAllFlags()) {
-                        isValid = false;
-                    }
+                if (chunk.substr(0, 2) != "--") {
+                    continue;
+                }
+
+                ParserParameter option;
+                if (!findOption(chunk, command, option)) {
+                    isValid = isValid && !command.getResolveAllFlags();
+                    continue;
+                }
+
+                const std::string optionValue =
+                    i == inputChunks.size() - 1 ? "" : inputChunks[i + 1];
+                const std::pair<bool, std::string> validationResult = option.validate(optionValue);
+                isValid = isValid && validationResult.first;
+                if (isValid) {
+                    validParamValues.emplace(chunk.substr(2), validationResult.second);
                 }
             }
 

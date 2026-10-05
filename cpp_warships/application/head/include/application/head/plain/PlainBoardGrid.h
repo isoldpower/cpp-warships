@@ -16,8 +16,8 @@ namespace cpp_warships::head::plain {
     /** @brief What is drawn on top of a plain board: where the cursor rests, which cells are
      * spoken for, and the letter those cells are marked with. */
     struct PlainBoardOverlay {
-        std::optional<core::Coordinate> cursor;
-        std::unordered_set<core::Coordinate> marked;
+        std::optional<core::Coordinate> cursor{};
+        std::unordered_set<core::Coordinate> marked{};
         char markGlyph = '+';
     };
 

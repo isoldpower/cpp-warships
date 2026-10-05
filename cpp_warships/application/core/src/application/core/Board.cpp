@@ -1,6 +1,7 @@
 #include <application/core/Board.h>
 
 #include <algorithm>
+#include <array>
 #include <optional>
 #include <utility>
 
@@ -63,14 +64,22 @@ namespace cpp_warships::core {
             return PlacementError::InvalidLength;
         }
 
+        struct PlacementRule {
+            bool (Board::*isBrokenAt)(Coordinate) const;
+            PlacementError error;
+        };
+        static constexpr std::array<PlacementRule, 3> RULES_IN_ORDER{{
+            {&Board::isOutside, PlacementError::OutOfBounds},
+            {&Board::isTaken, PlacementError::Overlaps},
+            {&Board::touchesExistingShip, PlacementError::TouchesAnotherShip},
+        }};
+
         const Ship candidateShip(origin, direction, length);
         for (const Coordinate coordinate : candidateShip.coordinates()) {
-            if (!contains(coordinate)) {
-                return PlacementError::OutOfBounds;
-            } else if (shipAt(coordinate) != nullptr) {
-                return PlacementError::Overlaps;
-            } else if (touchesExistingShip(coordinate)) {
-                return PlacementError::TouchesAnotherShip;
+            for (const PlacementRule& rule : RULES_IN_ORDER) {
+                if ((this->*rule.isBrokenAt)(coordinate)) {
+                    return rule.error;
+                }
             }
         }
 
@@ -168,20 +177,32 @@ namespace cpp_warships::core {
         const bool isAttacked = attackedCells_.contains(coordinate);
         const Ship* ship = shipAt(coordinate);
 
-        if (ship != nullptr && isAttacked) {
-            if (ship->isSunk()) {
-                return CellState::Sunk;
-            }
-
-            const std::optional<int> index = ship->segmentIndexAt(coordinate);
-            return ship->segmentHealth(*index) == 0 ? CellState::Destroyed : CellState::Damaged;
-        } else if (isAttacked) {
+        if (!isAttacked) {
+            const bool isOwnShipShown = ship != nullptr && visibility == Visibility::Owner;
+            return isOwnShipShown ? CellState::Ship : CellState::Water;
+        }
+        if (ship == nullptr) {
             return CellState::Miss;
-        } else if (ship != nullptr && visibility == Visibility::Owner) {
-            return CellState::Ship;
         }
 
-        return CellState::Water;
+        return stateOfStruck(*ship, coordinate);
+    }
+
+    CellState Board::stateOfStruck(const Ship& ship, Coordinate coordinate) {
+        if (ship.isSunk()) {
+            return CellState::Sunk;
+        }
+
+        const std::optional<int> index = ship.segmentIndexAt(coordinate);
+        return ship.segmentHealth(*index) == 0 ? CellState::Destroyed : CellState::Damaged;
+    }
+
+    bool Board::isOutside(Coordinate coordinate) const noexcept {
+        return !contains(coordinate);
+    }
+
+    bool Board::isTaken(Coordinate coordinate) const noexcept {
+        return shipAt(coordinate) != nullptr;
     }
 
     std::optional<int> Board::healthAt(Coordinate coordinate, Visibility visibility) const {

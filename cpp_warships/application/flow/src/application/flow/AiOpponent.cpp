@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <limits>
 #include <utility>
 
@@ -61,6 +62,11 @@ namespace cpp_warships::flow {
     }
 
     std::optional<core::Coordinate> AiOpponent::continueAlongHits(const core::Board& board) const {
+        constexpr std::size_t HITS_THAT_MAKE_A_RUN = 2;
+        if (currentTargetHits_.size() < HITS_THAT_MAKE_A_RUN) {
+            return std::nullopt;
+        }
+
         const bool isVerticalRun = currentTargetHits_[0].x == currentTargetHits_[1].x;
 
         int lowestAlongRun = std::numeric_limits<int>::max();
@@ -109,26 +115,36 @@ namespace cpp_warships::flow {
     }
 
     std::optional<core::Coordinate> AiOpponent::chooseTarget(const core::Board& board) {
-        if (const std::optional<core::Coordinate> holding = unfinishedHit(board)) {
-            return holding;
-        }
+        using TargetingStrategy = std::function<std::optional<core::Coordinate>()>;
+        const std::array<TargetingStrategy, 4> strategiesInOrder{
+            [this, &board] { return unfinishedHit(board); },
+            [this, &board] { return besideTheOnlyHit(board); },
+            [this, &board] { return continueAlongHits(board); },
+            [this, &board] { return pickRandomUntried(board); },
+        };
 
-        if (currentTargetHits_.size() == 1) {
-            const std::vector<core::Coordinate> neighbours =
-                untriedNeighbours(currentTargetHits_.front(), board);
-
-            if (!neighbours.empty()) {
-                std::uniform_int_distribution<std::size_t> distribution{0, neighbours.size() - 1};
-
-                return neighbours[distribution(randomEngine_)];
-            }
-        } else if (currentTargetHits_.size() > 1) {
-            if (const std::optional<core::Coordinate> extension = continueAlongHits(board)) {
-                return extension;
+        for (const TargetingStrategy& strategy : strategiesInOrder) {
+            if (const std::optional<core::Coordinate> target = strategy()) {
+                return target;
             }
         }
 
-        return pickRandomUntried(board);
+        return std::nullopt;
+    }
+
+    std::optional<core::Coordinate> AiOpponent::besideTheOnlyHit(const core::Board& board) {
+        if (currentTargetHits_.size() != 1) {
+            return std::nullopt;
+        }
+
+        const std::vector<core::Coordinate> neighbours =
+            untriedNeighbours(currentTargetHits_.front(), board);
+        if (neighbours.empty()) {
+            return std::nullopt;
+        }
+
+        std::uniform_int_distribution<std::size_t> distribution{0, neighbours.size() - 1};
+        return neighbours[distribution(randomEngine_)];
     }
 
     void AiOpponent::finishHunt(const core::Board& board) {

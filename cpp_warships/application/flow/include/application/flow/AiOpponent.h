@@ -59,10 +59,15 @@ namespace cpp_warships::flow {
         /** @brief A cell already struck that is still holding, and so is worth striking again.
          * A segment outlasts a single shot, so the chase must finish one before moving on. */
         [[nodiscard]] std::optional<core::Coordinate> unfinishedHit(const core::Board& board) const;
+        /** @brief A random untried cell beside the one hit so far, when exactly one is. */
+        [[nodiscard]] std::optional<core::Coordinate> besideTheOnlyHit(const core::Board& board);
+
         [[nodiscard]] std::vector<core::Coordinate> untriedNeighbours(
             core::Coordinate coordinate,
             const core::Board& board
         ) const;
+        /** @brief The next untried cell at either end of a run of hits, when there are two or more.
+         */
         [[nodiscard]] std::optional<core::Coordinate> continueAlongHits(
             const core::Board& board
         ) const;

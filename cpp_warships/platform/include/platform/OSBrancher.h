@@ -20,6 +20,10 @@ namespace cpp_warships::platform {
     /** @brief Where this system keeps a player's own files. */
     [[nodiscard]] std::optional<std::string> homeDirectory();
 
+    /** @brief Whether the host turns a key into its Latin letter in any keyboard layout before
+     * the game hears it, as the browser page does. */
+    [[nodiscard]] bool hostTranslatesKeyboardLayouts();
+
     /** @brief Makes the console able to show the glyphs the interface draws with. */
     void prepareConsoleForUnicode();
 }  // namespace cpp_warships::platform

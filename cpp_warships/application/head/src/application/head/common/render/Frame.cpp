@@ -21,6 +21,15 @@ namespace cpp_warships::head::common::render {
         [[nodiscard]] bool isStyled(const FrameCell& cell) {
             return cell.fill.has_value() || cell.ink.has_value() || cell.isBold;
         }
+
+        /** @brief The escape codes that switch on @p cell's weight and colours. */
+        [[nodiscard]] std::string styleOf(const FrameCell& cell) {
+            std::string style;
+            style += cell.isBold ? "\033[1m" : "";
+            style += cell.ink.has_value() ? foregroundCode(*cell.ink) : "";
+            style += cell.fill.has_value() ? backgroundCode(*cell.fill) : "";
+            return style;
+        }
     }  // namespace
 
     Frame::Frame(const int width, const int height)
@@ -91,15 +100,10 @@ namespace cpp_warships::head::common::render {
             for (int column = 0; column < frame.width(); ++column) {
                 const FrameCell& cell = frame.at(column, row);
 
-                if (isStyled(cell)) {
-                    text += cell.isBold ? "\033[1m" : "";
-                    text += cell.ink.has_value() ? foregroundCode(*cell.ink) : "";
-                    text += cell.fill.has_value() ? backgroundCode(*cell.fill) : "";
-                    isStyleOpen = true;
-                } else if (isStyleOpen) {
-                    text += STYLE_RESET;
-                    isStyleOpen = false;
-                }
+                const bool isStyledCell = isStyled(cell);
+                text += isStyledCell ? styleOf(cell) : "";
+                text += !isStyledCell && isStyleOpen ? STYLE_RESET : "";
+                isStyleOpen = isStyledCell;
 
                 text += cell.glyph;
             }

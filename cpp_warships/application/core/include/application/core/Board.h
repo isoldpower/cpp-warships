@@ -74,7 +74,13 @@ namespace cpp_warships::core {
 
     private:
         [[nodiscard]] const Ship* shipAt(Coordinate coordinate) const noexcept;
+        [[nodiscard]] bool isOutside(Coordinate coordinate) const noexcept;
+        [[nodiscard]] bool isTaken(Coordinate coordinate) const noexcept;
         [[nodiscard]] bool touchesExistingShip(Coordinate coordinate) const;
+
+        /** @brief What a struck cell of @p ship shows: sunk with its ship, or its segment's damage.
+         */
+        [[nodiscard]] static CellState stateOfStruck(const Ship& ship, Coordinate coordinate);
 
         /** @brief Marks the water hugging @p ship as attacked since nothing can be hiding there. */
         void revealWaterAround(const Ship& ship);

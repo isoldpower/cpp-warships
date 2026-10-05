@@ -1,6 +1,7 @@
 #include <application/head/common/input/EventBus.h>
 #include <application/head/common/input/Keystroke.h>
 
+#include <map>
 #include <utility>
 
 namespace cpp_warships::head::common::input {
@@ -21,19 +22,15 @@ namespace cpp_warships::head::common::input {
     }
 
     model::events::EventScope scopeOf(const ScreenKind screen) noexcept {
-        switch (screen) {
-            case ScreenKind::Menu:
-                return model::events::EventScope::Menu;
-            case ScreenKind::Saves:
-                return model::events::EventScope::Saves;
-            case ScreenKind::SaveNaming:
-                return model::events::EventScope::SaveNaming;
-            case ScreenKind::Placement:
-                return model::events::EventScope::Placement;
-            case ScreenKind::Battle:
-                return model::events::EventScope::Battle;
-        }
+        static const std::map<ScreenKind, model::events::EventScope> SCOPES = {
+            {ScreenKind::Menu, model::events::EventScope::Menu},
+            {ScreenKind::Saves, model::events::EventScope::Saves},
+            {ScreenKind::SaveNaming, model::events::EventScope::SaveNaming},
+            {ScreenKind::Placement, model::events::EventScope::Placement},
+            {ScreenKind::Battle, model::events::EventScope::Battle},
+        };
 
-        return model::events::EventScope::Always;
+        const auto scope = SCOPES.find(screen);
+        return scope == SCOPES.end() ? model::events::EventScope::Always : scope->second;
     }
 }  // namespace cpp_warships::head::common::input

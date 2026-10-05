@@ -39,6 +39,10 @@ namespace cpp_warships::head::tui {
      *  even the part a scrolled window hides, so positions inside it stay exact. */
     [[nodiscard]] ftxui::Decorator reflectWholeBox(ftxui::Box& box);
 
+    /** @brief Lets an element ask for no more than @p lines of height, however much it holds,
+     *  while still taking every line it is given; unlike FTXUI's size, it never caps the growth. */
+    [[nodiscard]] ftxui::Decorator heightAskedAtMost(int lines);
+
     /** @brief @p content in a window that gives way when room runs short, scrolled as close
      * to @p wanted as fits, with a bar along each edge it overflows. */
     [[nodiscard]] ftxui::Element scrollable(

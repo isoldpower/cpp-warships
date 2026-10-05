@@ -23,6 +23,7 @@ add_library(warships_head
         include/application/head/common/state/PanelState.h
         # Reading input: raw strokes in, asks in the game's own words out
         include/application/head/common/input/Keystroke.h src/application/head/common/input/Keystroke.cpp
+        include/application/head/common/input/KeyCodes.h src/application/head/common/input/KeyCodes.cpp
         include/application/head/common/input/GridGeometry.h src/application/head/common/input/GridGeometry.cpp
         include/application/head/common/input/ScreenRegion.h
         include/application/head/common/input/PanelScrolling.h src/application/head/common/input/PanelScrolling.cpp
@@ -106,6 +107,8 @@ if (BUILD_TESTING)
     add_executable(warships_head_tests
             tests/GridGeometryTests.cpp
             tests/KeystrokeTests.cpp
+            tests/KeyCodeTests.cpp
+            tests/KeyboardLayoutTests.cpp
             tests/PanelScrollingTests.cpp
             tests/PresentationContextTests.cpp
             tests/RenderTests.cpp

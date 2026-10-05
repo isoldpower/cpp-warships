@@ -68,4 +68,5 @@ namespace cpp_warships::head::common::input {
         EXPECT_TRUE(isWheelRolledAcross(shifted));
         EXPECT_FALSE(isWheelRolledAcross(plain));
     }
+
 }  // namespace cpp_warships::head::common::input

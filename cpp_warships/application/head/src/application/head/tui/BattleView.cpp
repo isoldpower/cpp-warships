@@ -25,6 +25,10 @@ namespace cpp_warships::head::tui {
         /** @brief The tallest the strip under the boards stands: a heading over the longest
          * list of keys the battle shows. */
         constexpr int BOTTOM_STRIP_HEIGHT = 7;
+
+        /** @brief The most height the log asks for, its heading and a few entries, however long
+         * the story gets; it still grows into whatever room the other panels leave. */
+        constexpr int LOG_LINES_ASKED = 4;
         constexpr int SKILL_ORDER_LINES = 4;
 
         ftxui::Element standing(const common::Theme& theme, const flow::Match& match) {
@@ -291,7 +295,8 @@ namespace cpp_warships::head::tui {
                  std::move(panels.skills),
                  divider(theme),
                  panels.isStoryFolded ? std::move(panels.story)
-                                      : std::move(panels.story) | ftxui::yflex_grow,
+                                      : std::move(panels.story) |
+                                            heightAskedAtMost(LOG_LINES_ASKED) | ftxui::yflex_grow,
                  divider(theme),
                  std::move(panels.shortcuts)}
             );
@@ -338,7 +343,8 @@ namespace cpp_warships::head::tui {
                  ftxui::vbox(
                      {std::move(panels.skills),
                       divider(theme),
-                      std::move(panels.story) | ftxui::yflex_grow,
+                      std::move(panels.story) | heightAskedAtMost(LOG_LINES_ASKED) |
+                          ftxui::yflex_grow,
                       divider(theme),
                       std::move(panels.shortcuts)}
                  ) | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, sidePanelWidth)}
@@ -409,7 +415,12 @@ namespace cpp_warships::head::tui {
             context_,
             SCREEN,
             sectionHeading(theme, "KEYS"),
-            keyLegend(theme, legend(match, isNarrow()), hotspots_)
+            keyLegend(
+                theme,
+                legend(match, isNarrow()),
+                hotspots_,
+                !context_.state().isKeyboardLayoutFree
+            )
         );
         const LogFolding folding = !isNarrow()            ? LogFolding::Fixed
                                    : state.isLogCollapsed ? LogFolding::Folded

@@ -6,20 +6,18 @@
 #include <application/head/common/input/keys/MoveCursorKey.h>
 
 #include <algorithm>
+#include <map>
 
 namespace cpp_warships::head::common::input::keys {
     namespace {
-        [[nodiscard]] core::Coordinate stepOf(const Keystroke& stroke) {
-            switch (stroke.key) {
-                case Key::ArrowLeft:
-                    return {-1, 0};
-                case Key::ArrowRight:
-                    return {1, 0};
-                case Key::ArrowUp:
-                    return {0, -1};
-                default:
-                    return {0, 1};
-            }
+        const std::map<Key, core::Coordinate>& stepsByArrow() {
+            static const std::map<Key, core::Coordinate> STEPS = {
+                {Key::ArrowLeft, {-1, 0}},
+                {Key::ArrowRight, {1, 0}},
+                {Key::ArrowUp, {0, -1}},
+                {Key::ArrowDown, {0, 1}},
+            };
+            return STEPS;
         }
     }  // namespace
 
@@ -27,13 +25,12 @@ namespace cpp_warships::head::common::input::keys {
         : context_(context) {}
 
     bool MoveCursorKey::matches(const Keystroke& stroke) const {
-        return stroke.key == Key::ArrowLeft || stroke.key == Key::ArrowRight ||
-               stroke.key == Key::ArrowUp || stroke.key == Key::ArrowDown;
+        return stepsByArrow().contains(stroke.key);
     }
 
     std::optional<model::events::GameEvent> MoveCursorKey::interpret(const Keystroke& stroke) {
         const core::Board& walked = board();
-        const core::Coordinate step = stepOf(stroke);
+        const core::Coordinate step = stepsByArrow().at(stroke.key);
         core::Coordinate& walking = cursor();
 
         walking.x = std::clamp(walking.x + step.x, 0, walked.width() - 1);
