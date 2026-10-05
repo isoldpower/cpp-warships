@@ -3,7 +3,8 @@ const NOTHING_TYPED_YET = undefined;
 
 export function openStandardStreams(terminal) {
     const typedBytes = [];
-    terminal.onData((keys) => typedBytes.push(...new TextEncoder().encode(keys)));
+    const typeText = (text) => typedBytes.push(...new TextEncoder().encode(text));
+    terminal.onData(typeText);
 
     const readTypedByte = () =>
         typedBytes.length === 0 ? NOTHING_TYPED_YET : typedBytes.shift();
@@ -19,5 +20,5 @@ export function openStandardStreams(terminal) {
         bytesOfFrameSoFar.length = 0;
     };
 
-    return { readTypedByte, writeDrawnByte };
+    return { readTypedByte, writeDrawnByte, typeText };
 }

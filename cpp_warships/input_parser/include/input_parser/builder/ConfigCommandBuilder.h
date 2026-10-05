@@ -9,16 +9,18 @@ namespace cpp_warships::input_parser::builder {
     public:
         ~ConfigCommandBuilder() override = default;
 
-        ConfigCommandBuilder& setDescription(std::string description) override {
-            this->description = std::move(description);
+        ConfigCommandBuilder& setDescription(std::string chosenDescription) override {
+            this->description = std::move(chosenDescription);
             return *this;
         };
         ConfigCommandBuilder& addParameter(model::ParserParameter parameter) override {
             this->parameters.push_back(std::move(parameter));
             return *this;
         };
-        ConfigCommandBuilder& setDisplayError(model::ParseCallback<void> displayError) override {
-            this->displayError = std::move(displayError);
+        ConfigCommandBuilder& setDisplayError(
+            model::ParseCallback<void> chosenDisplayError
+        ) override {
+            this->displayError = std::move(chosenDisplayError);
             return *this;
         };
         ConfigCommandBuilder& setCallback(model::ParseCallback<T> function) override {

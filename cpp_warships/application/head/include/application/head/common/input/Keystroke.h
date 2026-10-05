@@ -19,6 +19,10 @@ namespace cpp_warships::head::common::input {
         ArrowRight,
         PageUp,
         PageDown,
+        ShiftArrowUp,
+        ShiftArrowDown,
+        ShiftArrowLeft,
+        ShiftArrowRight,
 
         Pointer,
     };
@@ -31,6 +35,8 @@ namespace cpp_warships::head::common::input {
         Middle,
         WheelUp,
         WheelDown,
+        WheelLeft,
+        WheelRight,
     };
 
     /** @brief One thing the player did, in terms no particular terminal library owns. */
@@ -44,6 +50,9 @@ namespace cpp_warships::head::common::input {
         bool isPressed = false;
         int pointerX = 0;
         int pointerY = 0;
+
+        /** @brief Whether shift was held while the pointing device was used. */
+        bool isShiftHeld = false;
     };
 
     /** @brief Whether @p stroke is the given key being typed. */
@@ -52,6 +61,10 @@ namespace cpp_warships::head::common::input {
     /** @brief Whether @p stroke came from a pointing device at all. */
     [[nodiscard]] bool isPointer(const Keystroke& stroke);
 
-    /** @brief Whether @p stroke is the wheel being rolled either way. */
+    /** @brief Whether @p stroke is the wheel being rolled any way at all. */
     [[nodiscard]] bool isWheelRolled(const Keystroke& stroke);
+
+    /** @brief Whether @p stroke rolls the wheel sideways: tilted, or rolled with shift held,
+     * the way terminals and browsers scroll across. */
+    [[nodiscard]] bool isWheelRolledAcross(const Keystroke& stroke);
 }  // namespace cpp_warships::head::common::input

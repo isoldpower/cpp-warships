@@ -309,6 +309,7 @@ by reading a notification off the context, not by catching anything.
 | Thing | Layer | Reason |
 |---|---|---|
 | cursor, aim, selected ship length, board size, theme, log scroll | head | input affordances, not game concepts — mouse play has no cursor at all |
+| panel focus, panel scroll offsets, narrow-or-wide layout | head | how the screen is arranged; the game never knows a panel exists. Keys write offsets, renderers clamp them to what fits and record where each panel landed in `GridGeometry` |
 | grid geometry and hit-testing | head | whoever drew the grid is the only one who knows where it landed |
 | which screen shows | head | derived from `MatchPhase`; nothing to decide |
 | ordering of actions within one event | model | `IntendedGameScenario`, locally and visibly, not a global priority table |

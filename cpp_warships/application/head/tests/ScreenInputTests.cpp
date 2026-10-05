@@ -6,6 +6,7 @@
 #include <application/head/common/input/EventBus.h>
 #include <application/head/common/input/Keystroke.h>
 #include <application/head/common/input/MenuInput.h>
+#include <application/head/common/input/PanelScrolling.h>
 #include <application/head/common/input/PlacementInput.h>
 #include <application/head/common/input/SaveBrowserInput.h>
 #include <application/head/common/input/SaveNamingInput.h>
@@ -476,4 +477,268 @@ namespace cpp_warships::head::common::input {
         EXPECT_FALSE(bus.interpret(ScreenKind::Menu, typed("q")).has_value());
         EXPECT_EQ(fixture.context().state().naming.typedName, "q");
     }
+
+    TEST(PanelInputTests, ShiftedArrowsHandTheFocusOnWithoutMovingTheAim) {
+        PresentationFixture fixture;
+        fixture.game().play().startNewMatch(BOARD_SIZE);
+        fixture.game().play().shuffleFleet();
+        fixture.game().play().beginBattle();
+        BattleInput input{fixture.context()};
+        fixture.context().geometry().rememberPanel(
+            ScreenRegion::EnemyWaters,
+            PanelExtent{.left = 0, .top = 0, .width = 40, .height = 20}
+        );
+        fixture.context().geometry().rememberPanel(
+            ScreenRegion::Log,
+            PanelExtent{.left = 42, .top = 0, .width = 20, .height = 10}
+        );
+
+        EXPECT_FALSE(input.interpret(pressed(Key::ShiftArrowLeft)).has_value());
+
+        EXPECT_EQ(
+            focusedPanel(fixture.context().state(), ScreenKind::Battle),
+            ScreenRegion::EnemyWaters
+        );
+        EXPECT_EQ(fixture.context().state().battle.target, (core::Coordinate{0, 0}));
+    }
+
+    TEST(PanelInputTests, PageDownPagesThroughTheFocusedPanel) {
+        PresentationFixture fixture;
+        fixture.game().play().startNewMatch(BOARD_SIZE);
+        PlacementInput input{fixture.context()};
+        fixture.context().state().panels.focused[ScreenKind::Placement] = ScreenRegion::Fleet;
+        fixture.context().geometry().rememberPanel(
+            ScreenRegion::Fleet,
+            PanelExtent{
+                .left = 0,
+                .top = 0,
+                .width = 20,
+                .height = 4,
+                .contentWidth = 20,
+                .contentHeight = 10
+            }
+        );
+
+        EXPECT_FALSE(input.interpret(pressed(Key::PageDown)).has_value());
+
+        EXPECT_EQ(scrollOf(fixture.context().state(), ScreenRegion::Fleet).y, 3);
+    }
+
+    TEST(PanelInputTests, PageUpReadsFurtherBackThroughTheLog) {
+        PresentationFixture fixture;
+        fixture.game().play().startNewMatch(BOARD_SIZE);
+        fixture.game().play().shuffleFleet();
+        fixture.game().play().beginBattle();
+        BattleInput input{fixture.context()};
+        fixture.context().geometry().rememberPanel(
+            ScreenRegion::Log,
+            PanelExtent{
+                .left = 0,
+                .top = 0,
+                .width = 20,
+                .height = 4,
+                .contentWidth = 20,
+                .contentHeight = 10
+            }
+        );
+
+        EXPECT_FALSE(input.interpret(pressed(Key::PageUp)).has_value());
+
+        EXPECT_EQ(fixture.context().state().battle.logScroll, 3);
+    }
+
+    TEST(PanelInputTests, TheWheelScrollsWhicheverPanelItIsRolledOver) {
+        PresentationFixture fixture;
+        fixture.game().play().startNewMatch(BOARD_SIZE);
+        fixture.game().play().shuffleFleet();
+        fixture.game().play().beginBattle();
+        BattleInput input{fixture.context()};
+        fixture.context().geometry().rememberPanel(
+            ScreenRegion::Skills,
+            PanelExtent{
+                .left = 50,
+                .top = 0,
+                .width = 20,
+                .height = 3,
+                .contentWidth = 20,
+                .contentHeight = 10
+            }
+        );
+        const Keystroke rolledDown{
+            .key = Key::Pointer,
+            .button = PointerButton::WheelDown,
+            .pointerX = 55,
+            .pointerY = 1
+        };
+
+        EXPECT_FALSE(input.interpret(rolledDown).has_value());
+
+        EXPECT_EQ(scrollOf(fixture.context().state(), ScreenRegion::Skills).y, PANEL_SCROLL_STEP);
+        EXPECT_EQ(focusedPanel(fixture.context().state(), ScreenKind::Battle), ScreenRegion::Log);
+    }
+
+    TEST(PanelInputTests, WalkingTheAimOffTheWindowScrollsItBackIntoView) {
+        PresentationFixture fixture;
+        fixture.game().play().startNewMatch(BOARD_SIZE);
+        fixture.game().play().shuffleFleet();
+        fixture.game().play().beginBattle();
+        BattleInput input{fixture.context()};
+        fixture.context()
+            .geometry()
+            .rememberBoard(ScreenRegion::EnemyWaters, 3, 1, 39, 19, 10, 10, 4, 2);
+        fixture.context().geometry().rememberPanel(
+            ScreenRegion::EnemyWaters,
+            PanelExtent{
+                .left = 0,
+                .top = 0,
+                .width = 42,
+                .height = 6,
+                .contentWidth = 42,
+                .contentHeight = 20
+            }
+        );
+        fixture.context().state().battle.target = core::Coordinate{0, 2};
+
+        EXPECT_FALSE(input.interpret(pressed(Key::ArrowDown)).has_value());
+
+        EXPECT_EQ(fixture.context().state().battle.target, (core::Coordinate{0, 3}));
+        EXPECT_EQ(scrollOf(fixture.context().state(), ScreenRegion::EnemyWaters).y, 3);
+    }
+
+    TEST(PanelInputTests, ChoosingASaveScrollsItIntoView) {
+        PresentationFixture fixture;
+        for (const std::string name : {"first", "second", "third"}) {
+            fixture.game().play().startNewMatch(BOARD_SIZE);
+            (void)fixture.game().saves().saveMatch(name);
+        }
+        SaveBrowserInput input{fixture.context()};
+        fixture.context().geometry().rememberPanel(
+            ScreenRegion::SaveList,
+            PanelExtent{
+                .left = 0,
+                .top = 0,
+                .width = 40,
+                .height = 1,
+                .contentWidth = 40,
+                .contentHeight = 3
+            }
+        );
+
+        EXPECT_FALSE(input.interpret(pressed(Key::ArrowDown)).has_value());
+
+        EXPECT_EQ(fixture.context().state().saves.selectedIndex, 1);
+        EXPECT_EQ(scrollOf(fixture.context().state(), ScreenRegion::SaveList).y, 1);
+    }
+
+    TEST(PanelInputTests, TheWheelOverTheBoardScrollsItRatherThanPickingAShip) {
+        PresentationFixture fixture;
+        fixture.game().play().startNewMatch(BOARD_SIZE);
+        PlacementInput input{fixture.context()};
+        fixture.context()
+            .geometry()
+            .rememberBoard(ScreenRegion::OwnWaters, 3, 1, 39, 19, 10, 10, 4, 2);
+        fixture.context().geometry().rememberPanel(
+            ScreenRegion::OwnWaters,
+            PanelExtent{
+                .left = 0,
+                .top = 0,
+                .width = 20,
+                .height = 6,
+                .contentWidth = 42,
+                .contentHeight = 20
+            }
+        );
+        const int lengthBefore = fixture.context().state().placement.preferredShipLength;
+        const auto rolledOverACell = [](bool isShiftHeld) {
+            return Keystroke{
+                .key = Key::Pointer,
+                .button = PointerButton::WheelDown,
+                .pointerX = 4,
+                .pointerY = 1,
+                .isShiftHeld = isShiftHeld
+            };
+        };
+
+        EXPECT_FALSE(input.interpret(rolledOverACell(false)).has_value());
+        EXPECT_FALSE(input.interpret(rolledOverACell(true)).has_value());
+
+        EXPECT_EQ(
+            scrollOf(fixture.context().state(), ScreenRegion::OwnWaters).y,
+            PANEL_SCROLL_STEP
+        );
+        EXPECT_EQ(
+            scrollOf(fixture.context().state(), ScreenRegion::OwnWaters).x,
+            PANEL_SCROLL_STEP
+        );
+        EXPECT_EQ(fixture.context().state().placement.preferredShipLength, lengthBefore);
+    }
+
+    TEST(BattleInputTests, TypingLFoldsTheLogOnlyWhereItCanFold) {
+        PresentationFixture fixture;
+        fixture.game().play().startNewMatch(BOARD_SIZE);
+        fixture.game().play().shuffleFleet();
+        fixture.game().play().beginBattle();
+        BattleInput input{fixture.context()};
+        const bool wasCollapsed = fixture.context().state().battle.isLogCollapsed;
+
+        EXPECT_FALSE(input.interpret(typed("l")).has_value());
+        EXPECT_EQ(fixture.context().state().battle.isLogCollapsed, wasCollapsed);
+
+        fixture.context().geometry().rememberFoldable(ScreenRegion::Log, true);
+        EXPECT_FALSE(input.interpret(typed("l")).has_value());
+        EXPECT_EQ(fixture.context().state().battle.isLogCollapsed, !wasCollapsed);
+    }
+
+    TEST(BattleInputTests, ClickingTheLogHeadingFoldsOrOpensIt) {
+        PresentationFixture fixture;
+        fixture.game().play().startNewMatch(BOARD_SIZE);
+        fixture.game().play().shuffleFleet();
+        fixture.game().play().beginBattle();
+        BattleInput input{fixture.context()};
+        fixture.context().geometry().rememberFoldable(ScreenRegion::Log, true);
+        fixture.context().geometry().rememberPanel(
+            ScreenRegion::Log,
+            PanelExtent{.left = 1, .top = 20, .width = 40, .height = 0}
+        );
+        const bool wasCollapsed = fixture.context().state().battle.isLogCollapsed;
+        const Keystroke tapOnHeading{
+            .key = Key::Pointer,
+            .button = PointerButton::Left,
+            .isPressed = true,
+            .pointerX = 5,
+            .pointerY = 19
+        };
+
+        EXPECT_FALSE(input.interpret(tapOnHeading).has_value());
+
+        EXPECT_EQ(fixture.context().state().battle.isLogCollapsed, !wasCollapsed);
+    }
+
+    TEST(PanelInputTests, ClickingALegendLinePressesItsKey) {
+        PresentationFixture fixture;
+        MenuInput input{fixture.context()};
+        fixture.context().state().menu.selectedBoardSize = 12;
+        fixture.context().geometry().rememberPanel(
+            ScreenRegion::Shortcuts,
+            PanelExtent{.left = 0, .top = 0, .width = 30, .height = 5}
+        );
+        fixture.context().geometry().rememberHotspots({KeyHotspot{
+            .area = {.left = 0, .top = 0, .right = 29, .bottom = 0},
+            .stroke = {.key = Key::Enter}
+        }});
+        const Keystroke click{
+            .key = Key::Pointer,
+            .button = PointerButton::Left,
+            .isPressed = true,
+            .pointerX = 10,
+            .pointerY = 0
+        };
+
+        const std::optional<model::events::GameEvent> event = input.interpret(click);
+
+        ASSERT_TRUE(event.has_value());
+        ASSERT_TRUE(model::events::isKind<model::events::MatchStartRequested>(*event));
+        EXPECT_EQ(std::get<model::events::MatchStartRequested>(*event).boardSize, 12);
+    }
+
 }  // namespace cpp_warships::head::common::input

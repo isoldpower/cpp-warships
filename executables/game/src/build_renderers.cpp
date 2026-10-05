@@ -24,7 +24,7 @@ namespace cpp_warships::application {
 
             renderers.drawScreenWith(
                 head::common::ScreenKind::Menu,
-                std::make_unique<head::tui::MenuView>(context)
+                std::make_unique<head::tui::MenuView>(context, context.geometry())
             );
             renderers.drawScreenWith(
                 head::common::ScreenKind::Placement,
@@ -36,11 +36,11 @@ namespace cpp_warships::application {
             );
             renderers.drawScreenWith(
                 head::common::ScreenKind::Saves,
-                std::make_unique<head::tui::SaveBrowserView>(context)
+                std::make_unique<head::tui::SaveBrowserView>(context, context.geometry())
             );
             renderers.drawScreenWith(
                 head::common::ScreenKind::SaveNaming,
-                std::make_unique<head::tui::SaveNamingView>(context)
+                std::make_unique<head::tui::SaveNamingView>(context, context.geometry())
             );
 
             return renderers;

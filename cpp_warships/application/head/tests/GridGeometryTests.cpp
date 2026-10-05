@@ -94,9 +94,12 @@ namespace cpp_warships::head::common::input {
         EXPECT_EQ(geometry.cellAt(ScreenRegion::EnemyWaters, 22, 0), (core::Coordinate{1, 0}));
     }
 
-    TEST(GridGeometryTests, RemembersWhereTheLogWasDrawn) {
+    TEST(GridGeometryTests, RemembersWhereThePanelWithNoBoardWasDrawn) {
         GridGeometry geometry;
-        geometry.rememberLog(40, 2, 30, 12);
+        geometry.rememberPanel(
+            ScreenRegion::Log,
+            PanelExtent{.left = 40, .top = 2, .width = 30, .height = 12}
+        );
 
         EXPECT_EQ(geometry.regionAt(45, 6), ScreenRegion::Log);
         EXPECT_EQ(geometry.regionAt(39, 6), ScreenRegion::Elsewhere);
@@ -104,7 +107,10 @@ namespace cpp_warships::head::common::input {
 
     TEST(GridGeometryTests, TheLogHoldsNoCells) {
         GridGeometry geometry;
-        geometry.rememberLog(40, 2, 30, 12);
+        geometry.rememberPanel(
+            ScreenRegion::Log,
+            PanelExtent{.left = 40, .top = 2, .width = 30, .height = 12}
+        );
 
         EXPECT_EQ(geometry.cellAt(ScreenRegion::Log, 45, 6), std::nullopt);
     }
@@ -112,7 +118,10 @@ namespace cpp_warships::head::common::input {
     TEST(GridGeometryTests, ClearingForgetsEverythingDrawn) {
         GridGeometry geometry;
         rememberEnemyBoard(geometry);
-        geometry.rememberLog(40, 2, 30, 12);
+        geometry.rememberPanel(
+            ScreenRegion::Log,
+            PanelExtent{.left = 40, .top = 2, .width = 30, .height = 12}
+        );
 
         geometry.clear();
 
@@ -143,4 +152,89 @@ namespace cpp_warships::head::common::input {
 
         EXPECT_EQ(geometry.cellAt(ScreenRegion::OwnWaters, 2, 0), std::nullopt);
     }
+
+    TEST(GridGeometryTests, ABoardOnlyAnswersWhereItsPanelLeavesItShowing) {
+        GridGeometry geometry;
+        geometry
+            .rememberBoard(ScreenRegion::EnemyWaters, 10, 3, 16, 8, 8, 8, COLUMN_PITCH, ROW_PITCH);
+        geometry.rememberPanel(
+            ScreenRegion::EnemyWaters,
+            PanelExtent{.left = 10, .top = 5, .width = 16, .height = 4}
+        );
+
+        EXPECT_EQ(geometry.cellAt(ScreenRegion::EnemyWaters, 10, 4), std::nullopt);
+        EXPECT_EQ(geometry.regionAt(10, 4), ScreenRegion::Elsewhere);
+        EXPECT_EQ(geometry.cellAt(ScreenRegion::EnemyWaters, 10, 5), (core::Coordinate{0, 2}));
+        EXPECT_EQ(geometry.cellAt(ScreenRegion::EnemyWaters, 10, 9), std::nullopt);
+    }
+
+    TEST(GridGeometryTests, FindsThePanelUnderAPointerBoardsIncluded) {
+        GridGeometry geometry;
+        geometry.rememberPanel(
+            ScreenRegion::OwnWaters,
+            PanelExtent{.left = 0, .top = 0, .width = 10, .height = 10}
+        );
+        geometry.rememberPanel(
+            ScreenRegion::Skills,
+            PanelExtent{.left = 20, .top = 0, .width = 10, .height = 10}
+        );
+
+        EXPECT_EQ(geometry.panelAt(1, 1), ScreenRegion::OwnWaters);
+        EXPECT_EQ(geometry.regionAt(1, 1), ScreenRegion::Elsewhere);
+        EXPECT_EQ(geometry.panelAt(21, 1), ScreenRegion::Skills);
+        EXPECT_EQ(geometry.regionAt(21, 1), ScreenRegion::Skills);
+        EXPECT_EQ(geometry.panelAt(15, 1), ScreenRegion::Elsewhere);
+    }
+
+    TEST(GridGeometryTests, KnowsWhereACellWasDrawn) {
+        GridGeometry geometry;
+        rememberEnemyBoard(geometry);
+
+        const std::optional<ScreenArea> area =
+            geometry.areaOfCell(ScreenRegion::EnemyWaters, core::Coordinate{1, 2});
+
+        ASSERT_TRUE(area.has_value());
+        EXPECT_EQ(area->left, 12);
+        EXPECT_EQ(area->top, 7);
+        EXPECT_EQ(area->right, 13);
+        EXPECT_EQ(area->bottom, 7);
+    }
+
+    TEST(GridGeometryTests, ACellOffTheBoardTakesUpNoRoom) {
+        GridGeometry geometry;
+        rememberEnemyBoard(geometry);
+
+        EXPECT_EQ(
+            geometry.areaOfCell(ScreenRegion::EnemyWaters, core::Coordinate{8, 0}),
+            std::nullopt
+        );
+        EXPECT_EQ(
+            geometry.areaOfCell(ScreenRegion::OwnWaters, core::Coordinate{0, 0}),
+            std::nullopt
+        );
+    }
+
+    TEST(GridGeometryTests, ALegendLinePressesItsKeyOnlyWhereItsPanelShowsIt) {
+        GridGeometry geometry;
+        geometry.rememberPanel(
+            ScreenRegion::Shortcuts,
+            PanelExtent{.left = 50, .top = 10, .width = 20, .height = 2}
+        );
+        geometry.rememberHotspots(
+            {KeyHotspot{
+                 .area = {.left = 50, .top = 10, .right = 69, .bottom = 10},
+                 .stroke = {.key = Key::Enter}
+             },
+             KeyHotspot{
+                 .area = {.left = 50, .top = 13, .right = 69, .bottom = 13},
+                 .stroke = {.key = Key::Escape}
+             }}
+        );
+
+        ASSERT_TRUE(geometry.hotspotAt(55, 10).has_value());
+        EXPECT_EQ(geometry.hotspotAt(55, 10)->key, Key::Enter);
+        EXPECT_EQ(geometry.hotspotAt(55, 11), std::nullopt);
+        EXPECT_EQ(geometry.hotspotAt(55, 13), std::nullopt);
+    }
+
 }  // namespace cpp_warships::head::common::input

@@ -1,6 +1,19 @@
 #include <application/head/common/input/GridGeometry.h>
 
+#include <utility>
+
 namespace cpp_warships::head::common::input {
+    namespace {
+        [[nodiscard]] bool isBoard(const ScreenRegion region) {
+            return region == ScreenRegion::OwnWaters || region == ScreenRegion::EnemyWaters;
+        }
+    }  // namespace
+
+    bool PanelExtent::contains(const int screenX, const int screenY) const {
+        return screenX >= left && screenX < left + width && screenY >= top &&
+               screenY < top + height;
+    }
+
     bool GridGeometry::Patch::contains(const int screenX, const int screenY) const {
         return isKnown && screenX >= left && screenX < left + width && screenY >= top &&
                screenY < top + height;
@@ -47,43 +60,85 @@ namespace cpp_warships::head::common::input {
         };
     }
 
-    void GridGeometry::rememberLog(
-        const int left,
-        const int top,
-        const int width,
-        const int height
-    ) {
-        log_ = Patch{
-            .isKnown = true,
-            .left = left,
-            .top = top,
-            .width = width,
-            .height = height,
-            .boardWidth = 0,
-            .boardHeight = 0,
-            .columnPitch = 1,
-            .rowPitch = 1
-        };
+    void GridGeometry::rememberPanel(const ScreenRegion region, const PanelExtent& extent) {
+        if (region == ScreenRegion::Elsewhere) {
+            return;
+        }
+
+        panels_[region] = extent;
+    }
+
+    void GridGeometry::rememberFoldable(const ScreenRegion panel, const bool canFold) {
+        if (canFold) {
+            foldable_.insert(panel);
+            return;
+        }
+
+        foldable_.erase(panel);
+    }
+
+    bool GridGeometry::isFoldable(const ScreenRegion panel) const {
+        return foldable_.contains(panel);
+    }
+
+    void GridGeometry::rememberHotspots(std::vector<KeyHotspot> hotspots) {
+        hotspots_ = std::move(hotspots);
+    }
+
+    std::optional<Keystroke> GridGeometry::hotspotAt(const int screenX, const int screenY) const {
+        const std::optional<PanelExtent> legend = panelOf(ScreenRegion::Shortcuts);
+        if (!legend.has_value() || !legend->contains(screenX, screenY)) {
+            return std::nullopt;
+        }
+
+        for (const KeyHotspot& hotspot : hotspots_) {
+            const ScreenArea& area = hotspot.area;
+            if (screenX >= area.left && screenX <= area.right && screenY >= area.top &&
+                screenY <= area.bottom) {
+                return hotspot.stroke;
+            }
+        }
+
+        return std::nullopt;
     }
 
     void GridGeometry::clear() noexcept {
         ownWaters_ = Patch{};
         enemyWaters_ = Patch{};
-        log_ = Patch{};
+        panels_.clear();
+        foldable_.clear();
+        hotspots_.clear();
     }
 
     ScreenRegion GridGeometry::regionAt(const int screenX, const int screenY) const {
-        if (enemyWaters_.contains(screenX, screenY)) {
+        if (isShowing(ScreenRegion::EnemyWaters, screenX, screenY)) {
             return ScreenRegion::EnemyWaters;
         }
-        if (ownWaters_.contains(screenX, screenY)) {
+        if (isShowing(ScreenRegion::OwnWaters, screenX, screenY)) {
             return ScreenRegion::OwnWaters;
         }
-        if (log_.contains(screenX, screenY)) {
-            return ScreenRegion::Log;
+
+        const ScreenRegion panel = panelAt(screenX, screenY);
+        return isBoard(panel) ? ScreenRegion::Elsewhere : panel;
+    }
+
+    ScreenRegion GridGeometry::panelAt(const int screenX, const int screenY) const {
+        for (const auto& [region, extent] : panels_) {
+            if (extent.contains(screenX, screenY)) {
+                return region;
+            }
         }
 
         return ScreenRegion::Elsewhere;
+    }
+
+    std::optional<PanelExtent> GridGeometry::panelOf(const ScreenRegion region) const {
+        const auto found = panels_.find(region);
+        if (found == panels_.end()) {
+            return std::nullopt;
+        }
+
+        return found->second;
     }
 
     std::optional<core::Coordinate> GridGeometry::cellAt(
@@ -91,7 +146,44 @@ namespace cpp_warships::head::common::input {
         const int screenX,
         const int screenY
     ) const {
+        if (!isShowing(region, screenX, screenY)) {
+            return std::nullopt;
+        }
+
         return patchFor(region).cellAt(screenX, screenY);
+    }
+
+    std::optional<ScreenArea> GridGeometry::areaOfCell(
+        const ScreenRegion region,
+        const core::Coordinate cell
+    ) const {
+        const Patch& patch = patchFor(region);
+        if (!patch.isKnown || cell.x < 0 || cell.x >= patch.boardWidth || cell.y < 0 ||
+            cell.y >= patch.boardHeight) {
+            return std::nullopt;
+        }
+
+        const int left = patch.left + cell.x * patch.columnPitch;
+        const int top = patch.top + cell.y * patch.rowPitch;
+        return ScreenArea{
+            .left = left,
+            .top = top,
+            .right = left + patch.columnPitch - 1,
+            .bottom = top + patch.rowPitch - 1
+        };
+    }
+
+    bool GridGeometry::isShowing(
+        const ScreenRegion region,
+        const int screenX,
+        const int screenY
+    ) const {
+        if (!patchFor(region).contains(screenX, screenY)) {
+            return false;
+        }
+
+        const auto panel = panels_.find(region);
+        return panel == panels_.end() || panel->second.contains(screenX, screenY);
     }
 
     const GridGeometry::Patch& GridGeometry::patchFor(const ScreenRegion region) const {
@@ -100,9 +192,7 @@ namespace cpp_warships::head::common::input {
                 return ownWaters_;
             case ScreenRegion::EnemyWaters:
                 return enemyWaters_;
-            case ScreenRegion::Log:
-                return log_;
-            case ScreenRegion::Elsewhere:
+            default:
                 break;
         }
 

@@ -2,11 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+    <meta name="description" content="Warships, a terminal fleet engagement written in C++, running in the browser.">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#000000">
     <title>cpp_warships</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css">
     <style>
-        html, body { height: 100%; margin: 0; background: #000; }
-        #terminal { height: 100%; }
+        html, body { height: 100%; margin: 0; background: #000; overflow: hidden; overscroll-behavior: none; }
+        #terminal { height: 100%; height: 100dvh; touch-action: none; }
     </style>
 </head>
 <body>

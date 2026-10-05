@@ -9,27 +9,26 @@ namespace cpp_warships::serialization::helpers::serializers {
      * extract field values from a serialized string representation. */
     class JsonStringSerializer {
     public:
-        /** @brief Extracts the value of a specified field from a serialized string. */
+        /** @brief Extracts the value of a specified field from a serialized string, looking
+         * only at the object's own fields and never into an object nested inside it. */
         static std::string* extractFieldValue(
             std::string& data,
             const std::string& fieldName,
             bool isImplicit = false
         ) {
-            size_t fieldLength = fieldName.length();
-            size_t separatorLength = 2;
-            size_t startPos = data.find(fieldName);
-            size_t finalStartPos = startPos + fieldLength + separatorLength;
-
+            const std::string prefix = fieldName + ": ";
+            const size_t startPos = findOwnField(data, prefix);
             if (startPos == std::string::npos) {
                 return nullptr;
-            } else {
-                size_t endPos = data.find(isImplicit ? "};" : ";", finalStartPos);
-                if (endPos == std::string::npos) {
-                    endPos = data.length();
-                }
-
-                return new std::string(data.substr(finalStartPos, endPos - finalStartPos));
             }
+
+            const size_t finalStartPos = startPos + prefix.length();
+            size_t endPos = data.find(isImplicit ? "};" : ";", finalStartPos);
+            if (endPos == std::string::npos) {
+                endPos = data.length();
+            }
+
+            return new std::string(data.substr(finalStartPos, endPos - finalStartPos));
         }
 
         /** @brief Sets the value for a specified field in a serialized string.
@@ -72,6 +71,34 @@ namespace cpp_warships::serialization::helpers::serializers {
                    item.find(':') != std::string::npos;
         }
 
+    private:
+        /** @brief Where the field starting with @p prefix begins: at the start of a line and
+         * no deeper than the outermost braces, so a nested field of the same name is passed by. */
+        static size_t findOwnField(const std::string& data, const std::string& prefix) {
+            size_t depth = 0;
+            for (size_t position = 0; position < data.length(); ++position) {
+                const char current = data[position];
+                if (current == '{') {
+                    ++depth;
+                    continue;
+                }
+                if (current == '}') {
+                    depth = depth > 0 ? depth - 1 : 0;
+                    continue;
+                }
+
+                const bool isLineStart =
+                    position == 0 || data[position - 1] == '\n' || data[position - 1] == '{';
+                if (depth <= 1 && isLineStart &&
+                    data.compare(position, prefix.length(), prefix) == 0) {
+                    return position;
+                }
+            }
+
+            return std::string::npos;
+        }
+
+    public:
         /** @brief Serializes a map of fields into a string representation.          *  @return A
          * string representation of the serialized fields in a JSON-like format. */
         static std::string serializeFields(

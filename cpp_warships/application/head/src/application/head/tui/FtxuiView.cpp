@@ -12,6 +12,13 @@ namespace cpp_warships::head::tui {
         constexpr int DEFAULT_FRAME_WIDTH = 80;
         constexpr int DEFAULT_FRAME_HEIGHT = 24;
 
+        /** @brief What terminals send for an arrow held with shift, which FTXUI has no
+         * name for: the arrow's own code with the shift modifier, 2, added. */
+        constexpr const char* SHIFT_ARROW_UP = "\x1B[1;2A";
+        constexpr const char* SHIFT_ARROW_DOWN = "\x1B[1;2B";
+        constexpr const char* SHIFT_ARROW_RIGHT = "\x1B[1;2C";
+        constexpr const char* SHIFT_ARROW_LEFT = "\x1B[1;2D";
+
         [[nodiscard]] common::input::Key keyOf(const ftxui::Event& event) {
             static const std::map<ftxui::Event, common::input::Key> NAMED_KEYS = {
                 {ftxui::Event::Return, common::input::Key::Enter},
@@ -25,6 +32,10 @@ namespace cpp_warships::head::tui {
                 {ftxui::Event::ArrowRight, common::input::Key::ArrowRight},
                 {ftxui::Event::PageUp, common::input::Key::PageUp},
                 {ftxui::Event::PageDown, common::input::Key::PageDown},
+                {ftxui::Event::Special(SHIFT_ARROW_UP), common::input::Key::ShiftArrowUp},
+                {ftxui::Event::Special(SHIFT_ARROW_DOWN), common::input::Key::ShiftArrowDown},
+                {ftxui::Event::Special(SHIFT_ARROW_LEFT), common::input::Key::ShiftArrowLeft},
+                {ftxui::Event::Special(SHIFT_ARROW_RIGHT), common::input::Key::ShiftArrowRight},
             };
 
             const auto named = NAMED_KEYS.find(event);
@@ -42,6 +53,8 @@ namespace cpp_warships::head::tui {
                 {ftxui::Mouse::Middle, common::input::PointerButton::Middle},
                 {ftxui::Mouse::WheelUp, common::input::PointerButton::WheelUp},
                 {ftxui::Mouse::WheelDown, common::input::PointerButton::WheelDown},
+                {ftxui::Mouse::WheelLeft, common::input::PointerButton::WheelLeft},
+                {ftxui::Mouse::WheelRight, common::input::PointerButton::WheelRight},
             };
 
             const auto button = BUTTONS.find(mouse.button);
@@ -101,7 +114,8 @@ namespace cpp_warships::head::tui {
                 .button = buttonOf(mouse),
                 .isPressed = mouse.motion == ftxui::Mouse::Pressed,
                 .pointerX = mouse.x,
-                .pointerY = mouse.y
+                .pointerY = mouse.y,
+                .isShiftHeld = mouse.shift
             };
         }
 
@@ -109,6 +123,22 @@ namespace cpp_warships::head::tui {
             .key = keyOf(event),
             .character = event.is_character() ? event.character() : std::string{}
         };
+    }
+
+    ftxui::Element dialogFrame(
+        const common::Theme& theme,
+        ftxui::Element body,
+        const int minimumWidth,
+        const bool isNarrow
+    ) {
+        ftxui::Element sized =
+            isNarrow
+                ? std::move(body) | ftxui::flex
+                : std::move(body) | ftxui::flex_shrink |
+                      ftxui::size(ftxui::WIDTH, ftxui::GREATER_THAN, minimumWidth) | ftxui::center;
+
+        return std::move(sized) | ftxui::border | color(theme.border) | bgcolor(theme.background) |
+               ftxui::flex;
     }
 
     ftxui::Element elementOfFrame(const common::render::Frame& frame) {
@@ -122,10 +152,12 @@ namespace cpp_warships::head::tui {
         const int width = availableWidth > 0 ? availableWidth : DEFAULT_FRAME_WIDTH;
         const int height = availableHeight > 0 ? availableHeight : DEFAULT_FRAME_HEIGHT;
 
+        availableWidth_ = width;
         ftxui::Element element = renderElement();
         ftxui::Screen screen =
             ftxui::Screen::Create(ftxui::Dimension::Fixed(width), ftxui::Dimension::Fixed(height));
         ftxui::Render(screen, element);
+        publishLayout();
 
         common::render::Frame frame{width, height};
         for (int row = 0; row < height; ++row) {
@@ -141,5 +173,19 @@ namespace cpp_warships::head::tui {
         }
 
         return frame;
+    }
+
+    void FtxuiRenderer::publishLayout() {}
+
+    bool FtxuiRenderer::isLaptop() const noexcept {
+        return !isNarrow() && availableWidth_ < LAPTOP_LAYOUT_COLUMNS;
+    }
+
+    int FtxuiRenderer::availableWidth() const noexcept {
+        return availableWidth_;
+    }
+
+    bool FtxuiRenderer::isNarrow() const noexcept {
+        return availableWidth_ < NARROW_LAYOUT_COLUMNS;
     }
 }  // namespace cpp_warships::head::tui

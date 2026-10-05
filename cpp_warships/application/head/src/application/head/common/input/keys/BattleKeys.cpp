@@ -2,20 +2,13 @@
 #include <application/head/common/input/Keystroke.h>
 #include <application/head/common/input/keys/BattleKeys.h>
 
-#include <algorithm>
-
 namespace cpp_warships::head::common::input::keys {
     namespace {
-        constexpr int LOG_SCROLL_STEP = 3;
+        void toggleLog(PresentationContext& context) {
+            bool& isCollapsed = context.state().battle.isLogCollapsed;
+            isCollapsed = !isCollapsed;
+        }
     }  // namespace
-
-    void scrollLog(PresentationContext& context, const int step) {
-        const int furthest =
-            state::furthestLogScroll(static_cast<int>(context.game().journal().entries().size()));
-        int& scrolled = context.state().battle.logScroll;
-
-        scrolled = std::clamp(scrolled + step, 0, furthest);
-    }
 
     BattleKey::BattleKey(PresentationContext& context) noexcept
         : context_(context) {}
@@ -37,22 +30,8 @@ namespace cpp_warships::head::common::input::keys {
         return context_.game().match().computerBoard();
     }
 
-    bool ScrollLogBackKey::matches(const Keystroke& stroke) const {
-        return stroke.key == Key::PageUp;
-    }
-
-    std::optional<model::events::GameEvent> ScrollLogBackKey::interpret(const Keystroke&) {
-        scrollLog(context_, LOG_SCROLL_STEP);
-        return std::nullopt;
-    }
-
-    bool ScrollLogForwardKey::matches(const Keystroke& stroke) const {
-        return stroke.key == Key::PageDown;
-    }
-
-    std::optional<model::events::GameEvent> ScrollLogForwardKey::interpret(const Keystroke&) {
-        scrollLog(context_, -LOG_SCROLL_STEP);
-        return std::nullopt;
+    ScreenRegion MoveBattleAimKey::region() const {
+        return ScreenRegion::EnemyWaters;
     }
 
     bool FireKey::matches(const Keystroke& stroke) const {
@@ -73,21 +52,29 @@ namespace cpp_warships::head::common::input::keys {
         return model::events::SkillUseRequested{.aim = context_.state().battle.target};
     }
 
-    bool ScrollLogWithWheelKey::matches(const Keystroke& stroke) const {
-        if (!isPointer(stroke) || !isWheelRolled(stroke)) {
+    bool ToggleLogKey::matches(const Keystroke& stroke) const {
+        return isCharacter(stroke, "l") && context_.geometry().isFoldable(ScreenRegion::Log);
+    }
+
+    std::optional<model::events::GameEvent> ToggleLogKey::interpret(const Keystroke&) {
+        toggleLog(context_);
+        return std::nullopt;
+    }
+
+    bool ToggleLogWithPointerKey::matches(const Keystroke& stroke) const {
+        const std::optional<PanelExtent> log = context_.geometry().panelOf(ScreenRegion::Log);
+        if (!log.has_value() || !context_.geometry().isFoldable(ScreenRegion::Log) ||
+            !isPointer(stroke) || !stroke.isPressed || stroke.button != PointerButton::Left) {
             return false;
         }
 
-        return context_.geometry().regionAt(stroke.pointerX, stroke.pointerY) == ScreenRegion::Log;
+        const bool isOnHeadingRow = stroke.pointerY == log->top - 1;
+        return isOnHeadingRow && stroke.pointerX >= log->left &&
+               stroke.pointerX < log->left + log->width;
     }
 
-    std::optional<model::events::GameEvent> ScrollLogWithWheelKey::interpret(
-        const Keystroke& stroke
-    ) {
-        const int step =
-            stroke.button == PointerButton::WheelUp ? LOG_SCROLL_STEP : -LOG_SCROLL_STEP;
-        scrollLog(context_, step);
-
+    std::optional<model::events::GameEvent> ToggleLogWithPointerKey::interpret(const Keystroke&) {
+        toggleLog(context_);
         return std::nullopt;
     }
 

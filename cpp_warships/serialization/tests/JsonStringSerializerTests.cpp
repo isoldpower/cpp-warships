@@ -55,6 +55,24 @@ namespace cpp_warships::serialization::helpers {
         EXPECT_EQ(*second, "two");
     }
 
+    TEST(JsonStringSerializerTests, ReadsTheOuterFieldWhenANestedOneSharesItsName) {
+        std::string written = "{\nnested: {\nname: inner value;\n};\nname: outer value;\n};\n";
+
+        const auto value = owned(JsonStringSerializer::extractFieldValue(written, "name"));
+
+        ASSERT_NE(value, nullptr);
+        EXPECT_EQ(*value, "outer value");
+    }
+
+    TEST(JsonStringSerializerTests, ReadsOnlyAFieldWithExactlyTheNameAsked) {
+        std::string written = "{\nsurname: wrong;\nname: right;\n};\n";
+
+        const auto value = owned(JsonStringSerializer::extractFieldValue(written, "name"));
+
+        ASSERT_NE(value, nullptr);
+        EXPECT_EQ(*value, "right");
+    }
+
     TEST(JsonStringSerializerTests, SetsAFieldThatIsThere) {
         std::string written = JsonStringSerializer::serializeFields({{"name", "a value"}});
         std::string field;

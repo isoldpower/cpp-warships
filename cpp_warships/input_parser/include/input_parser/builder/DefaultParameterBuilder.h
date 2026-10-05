@@ -12,18 +12,18 @@ namespace cpp_warships::input_parser::builder {
             return *this;
         };
 
-        DefaultParameterBuilder& setValidator(std::regex validator) override {
-            this->validator = validator;
+        DefaultParameterBuilder& setValidator(std::regex chosenValidator) override {
+            this->validator = chosenValidator;
             return *this;
         }
 
-        DefaultParameterBuilder& setDescription(std::string description) override {
-            this->description = description;
+        DefaultParameterBuilder& setDescription(std::string chosenDescription) override {
+            this->description = chosenDescription;
             return *this;
         }
 
-        DefaultParameterBuilder& setNecessary(bool necessary) override {
-            this->necessary = necessary;
+        DefaultParameterBuilder& setNecessary(bool isNecessary) override {
+            this->necessary = isNecessary;
             return *this;
         }
 

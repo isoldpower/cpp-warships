@@ -38,6 +38,7 @@ namespace cpp_warships::head::common::input::keys {
     protected:
         [[nodiscard]] core::Coordinate& cursor() override;
         [[nodiscard]] const core::Board& board() const override;
+        [[nodiscard]] ScreenRegion region() const override;
     };
 
     /** @brief Turns the ship in hand from lying across to lying down and back. */
@@ -115,17 +116,6 @@ namespace cpp_warships::head::common::input::keys {
 
     /** @brief Takes back whichever ship the pointer was pressed on. */
     class TakeShipBackWithPointerKey final : public PlacementKey {
-    public:
-        using PlacementKey::PlacementKey;
-
-        [[nodiscard]] bool matches(const Keystroke& stroke) const override;
-        [[nodiscard]] std::optional<model::events::GameEvent> interpret(
-            const Keystroke& stroke
-        ) override;
-    };
-
-    /** @brief Takes up another length by rolling the wheel over the board. */
-    class PickShipLengthWithWheelKey final : public PlacementKey {
     public:
         using PlacementKey::PlacementKey;
 

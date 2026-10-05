@@ -53,4 +53,19 @@ namespace cpp_warships::head::common::input {
 
         EXPECT_FALSE(isWheelRolled(stroke));
     }
+
+    TEST(KeystrokeTests, ATiltedWheelOrAShiftedRollScrollsAcross) {
+        const Keystroke tilted{.key = Key::Pointer, .button = PointerButton::WheelRight};
+        const Keystroke shifted{
+            .key = Key::Pointer,
+            .button = PointerButton::WheelDown,
+            .isShiftHeld = true
+        };
+        const Keystroke plain{.key = Key::Pointer, .button = PointerButton::WheelDown};
+
+        EXPECT_TRUE(isWheelRolled(tilted));
+        EXPECT_TRUE(isWheelRolledAcross(tilted));
+        EXPECT_TRUE(isWheelRolledAcross(shifted));
+        EXPECT_FALSE(isWheelRolledAcross(plain));
+    }
 }  // namespace cpp_warships::head::common::input

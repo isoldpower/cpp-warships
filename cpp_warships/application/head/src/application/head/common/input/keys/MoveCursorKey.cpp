@@ -2,6 +2,7 @@
 #include <application/core/Coordinate.h>
 #include <application/head/common/PresentationContext.h>
 #include <application/head/common/input/Keystroke.h>
+#include <application/head/common/input/PanelScrolling.h>
 #include <application/head/common/input/keys/MoveCursorKey.h>
 
 #include <algorithm>
@@ -37,6 +38,7 @@ namespace cpp_warships::head::common::input::keys {
 
         walking.x = std::clamp(walking.x + step.x, 0, walked.width() - 1);
         walking.y = std::clamp(walking.y + step.y, 0, walked.height() - 1);
+        revealCell(context_, region(), walking);
 
         return std::nullopt;
     }

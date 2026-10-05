@@ -2,6 +2,7 @@
 
 #include <application/head/common/state/BattleState.h>
 #include <application/head/common/state/MenuState.h>
+#include <application/head/common/state/PanelState.h>
 #include <application/head/common/state/PlacementState.h>
 #include <application/head/common/state/SaveBrowserState.h>
 #include <application/head/common/state/SaveNamingState.h>
@@ -15,6 +16,7 @@ namespace cpp_warships::head::common::state {
         BattleState battle;
         SaveBrowserState saves;
         SaveNamingState naming;
+        PanelState panels;
 
         /** @brief Whether the player has stepped out to the menu. */
         bool isAtMenu = true;

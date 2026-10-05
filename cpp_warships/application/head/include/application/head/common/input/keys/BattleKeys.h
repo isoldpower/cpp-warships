@@ -8,9 +8,6 @@ namespace cpp_warships::head::common {
 }
 
 namespace cpp_warships::head::common::input::keys {
-    /** @brief Scrolls the log by @p step, stopping at either end of what there is. */
-    void scrollLog(PresentationContext& context, int step);
-
     /** @brief Every binding here works from the context and nothing else. */
     class BattleKey : public InputKey {
     public:
@@ -33,28 +30,7 @@ namespace cpp_warships::head::common::input::keys {
     protected:
         [[nodiscard]] core::Coordinate& cursor() override;
         [[nodiscard]] const core::Board& board() const override;
-    };
-
-    /** @brief Reads further back through the log. */
-    class ScrollLogBackKey final : public BattleKey {
-    public:
-        using BattleKey::BattleKey;
-
-        [[nodiscard]] bool matches(const Keystroke& stroke) const override;
-        [[nodiscard]] std::optional<model::events::GameEvent> interpret(
-            const Keystroke& stroke
-        ) override;
-    };
-
-    /** @brief Reads back towards the newest of the log. */
-    class ScrollLogForwardKey final : public BattleKey {
-    public:
-        using BattleKey::BattleKey;
-
-        [[nodiscard]] bool matches(const Keystroke& stroke) const override;
-        [[nodiscard]] std::optional<model::events::GameEvent> interpret(
-            const Keystroke& stroke
-        ) override;
+        [[nodiscard]] ScreenRegion region() const override;
     };
 
     /** @brief Fires on wherever the aim rests. */
@@ -79,8 +55,19 @@ namespace cpp_warships::head::common::input::keys {
         ) override;
     };
 
-    /** @brief Scrolls the log by rolling the wheel over it. */
-    class ScrollLogWithWheelKey final : public BattleKey {
+    /** @brief Folds the log away, or opens it out again, where the screen lets it fold. */
+    class ToggleLogKey final : public BattleKey {
+    public:
+        using BattleKey::BattleKey;
+
+        [[nodiscard]] bool matches(const Keystroke& stroke) const override;
+        [[nodiscard]] std::optional<model::events::GameEvent> interpret(
+            const Keystroke& stroke
+        ) override;
+    };
+
+    /** @brief Folds or opens the log when its heading is clicked or tapped. */
+    class ToggleLogWithPointerKey final : public BattleKey {
     public:
         using BattleKey::BattleKey;
 

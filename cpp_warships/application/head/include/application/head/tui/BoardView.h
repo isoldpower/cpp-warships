@@ -49,10 +49,10 @@ namespace cpp_warships::head::tui {
             const BoardOverlay& overlay
         );
 
-    private:
-        /** @brief Writes down where the grid landed when it was last painted. */
+        /** @brief Writes down where the grid landed when it was last laid out. */
         void publishGeometry() const;
 
+    private:
         common::input::GridGeometry& geometry_;
         common::input::ScreenRegion region_;
         ftxui::Box gridBox_;

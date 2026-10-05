@@ -13,21 +13,37 @@
 namespace cpp_warships::head::tui {
     namespace {
         constexpr int MINIMUM_PANEL_WIDTH = 46;
+        ftxui::Element divider(const common::Theme& theme) {
+            return ftxui::separator() | color(theme.border);
+        }
+
+        ftxui::Element sectionHeading(const common::Theme& theme, const std::string& title) {
+            return ftxui::text(title) | ftxui::bold | color(theme.accent);
+        }
     }  // namespace
 
-    SaveBrowserView::SaveBrowserView(const common::PresentationContext& context) noexcept
-        : context_(context) {}
+    SaveBrowserView::SaveBrowserView(
+        const common::PresentationContext& context,
+        common::input::GridGeometry& geometry
+    ) noexcept
+        : context_(context)
+        , geometry_(geometry)
+        , bodyPanel_(common::input::ScreenRegion::SaveList)
+        , shortcutsPanel_(common::input::ScreenRegion::Shortcuts) {}
+
+    void SaveBrowserView::publishLayout() {
+        bodyPanel_.publish(geometry_);
+        shortcutsPanel_.publish(geometry_);
+        hotspots_.publish(geometry_);
+    }
 
     ftxui::Element SaveBrowserView::renderElement() {
         const common::Theme& theme = context_.theme();
         const std::vector<persistence::SaveSummary> saves = context_.game().saves().savedMatches();
         const int chosen = context_.state().saves.selectedIndex;
+        constexpr common::ScreenKind SCREEN = common::ScreenKind::Saves;
 
-        std::vector<ftxui::Element> rows{
-            ftxui::text("SAVED GAMES") | ftxui::bold | color(theme.accent) | ftxui::hcenter,
-            ftxui::separator() | color(theme.border)
-        };
-
+        std::vector<ftxui::Element> rows;
         if (saves.empty()) {
             rows.push_back(ftxui::text("nothing has been saved yet") | color(theme.textMuted));
         }
@@ -45,20 +61,33 @@ namespace cpp_warships::head::tui {
             );
         }
 
-        rows.push_back(ftxui::separator() | color(theme.border));
-
-        std::vector<ftxui::Element> hints{keyHint(theme, "arrows", "choose a save")};
+        std::vector<KeyHint> hints{KeyHint{.key = "arrows", .description = "choose a save"}};
         if (!saves.empty()) {
-            hints.push_back(keyHint(theme, "enter", "load it"));
-            hints.push_back(keyHint(theme, "d", "delete it"));
+            hints.push_back(KeyHint{.key = "enter", .description = "load it"});
+            hints.push_back(KeyHint{.key = "d", .description = "delete it"});
         }
-        hints.push_back(keyHint(theme, "esc", "back to the menu"));
+        hints.push_back(KeyHint{.key = "esc", .description = "back to the menu"});
 
-        rows.push_back(keyLegend(std::move(hints)));
-        rows.push_back(noticeBlock(theme, context_.application()));
-
-        return ftxui::vbox(std::move(rows)) |
-               ftxui::size(ftxui::WIDTH, ftxui::GREATER_THAN, MINIMUM_PANEL_WIDTH) | ftxui::center |
-               ftxui::border | color(theme.border) | bgcolor(theme.background) | ftxui::flex;
+        return dialogFrame(
+            theme,
+            ftxui::vbox(
+                {bodyPanel_.render(
+                     context_,
+                     SCREEN,
+                     sectionHeading(theme, "SAVED GAMES"),
+                     ftxui::vbox(std::move(rows))
+                 ),
+                 divider(theme),
+                 shortcutsPanel_.render(
+                     context_,
+                     SCREEN,
+                     sectionHeading(theme, "KEYS"),
+                     keyLegend(theme, std::move(hints), hotspots_)
+                 ),
+                 noticeBlock(theme, context_.application())}
+            ),
+            MINIMUM_PANEL_WIDTH,
+            isNarrow()
+        );
     }
 }  // namespace cpp_warships::head::tui

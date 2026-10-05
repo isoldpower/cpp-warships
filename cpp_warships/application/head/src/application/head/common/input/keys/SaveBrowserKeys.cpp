@@ -1,5 +1,6 @@
 #include <application/head/common/PresentationContext.h>
 #include <application/head/common/input/Keystroke.h>
+#include <application/head/common/input/PanelScrolling.h>
 #include <application/head/common/input/keys/SaveBrowserKeys.h>
 
 #include <algorithm>
@@ -37,6 +38,11 @@ namespace cpp_warships::head::common::input::keys {
         int& chosen = context_.state().saves.selectedIndex;
 
         chosen = std::clamp(chosen + step, 0, std::max(0, lastIndexOf(context_)));
+        revealInPanel(
+            context_,
+            ScreenRegion::SaveList,
+            ScreenArea{.left = 0, .top = chosen, .right = 0, .bottom = chosen}
+        );
         return std::nullopt;
     }
 

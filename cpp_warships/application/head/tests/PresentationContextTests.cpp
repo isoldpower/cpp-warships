@@ -118,7 +118,10 @@ namespace cpp_warships::head::common {
         PresentationFixture fixture;
 
         fixture.context().state().battle.target = core::Coordinate{3, 4};
-        fixture.context().geometry().rememberLog(0, 0, 10, 10);
+        fixture.context().geometry().rememberPanel(
+            input::ScreenRegion::Log,
+            input::PanelExtent{.left = 0, .top = 0, .width = 10, .height = 10}
+        );
 
         EXPECT_EQ(fixture.context().state().battle.target, (core::Coordinate{3, 4}));
         EXPECT_EQ(fixture.context().geometry().regionAt(1, 1), input::ScreenRegion::Log);

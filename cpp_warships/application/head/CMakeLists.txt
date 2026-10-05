@@ -20,15 +20,20 @@ add_library(warships_head
         include/application/head/common/state/SaveBrowserState.h
         include/application/head/common/state/SaveNamingState.h
         include/application/head/common/state/PresentationState.h
+        include/application/head/common/state/PanelState.h
         # Reading input: raw strokes in, asks in the game's own words out
         include/application/head/common/input/Keystroke.h src/application/head/common/input/Keystroke.cpp
         include/application/head/common/input/GridGeometry.h src/application/head/common/input/GridGeometry.cpp
+        include/application/head/common/input/ScreenRegion.h
+        include/application/head/common/input/PanelScrolling.h src/application/head/common/input/PanelScrolling.cpp
         include/application/head/common/input/ScreenInput.h
         include/application/head/common/input/InputKey.h
         include/application/head/common/input/BoundScreenInput.h
         src/application/head/common/input/BoundScreenInput.cpp
         include/application/head/common/input/keys/MoveCursorKey.h
         src/application/head/common/input/keys/MoveCursorKey.cpp
+        include/application/head/common/input/keys/PanelKeys.h
+        src/application/head/common/input/keys/PanelKeys.cpp
         include/application/head/common/input/keys/LeaveToMenuKey.h
         src/application/head/common/input/keys/LeaveToMenuKey.cpp
         include/application/head/common/input/keys/MenuKeys.h
@@ -87,6 +92,7 @@ add_library(warships_head_tui
         include/application/head/tui/CellAppearance.h src/application/head/tui/CellAppearance.cpp
         include/application/head/tui/KeyHint.h src/application/head/tui/KeyHint.cpp
         include/application/head/tui/BoardView.h src/application/head/tui/BoardView.cpp
+        include/application/head/tui/ScrollPanel.h src/application/head/tui/ScrollPanel.cpp
         include/application/head/tui/MenuView.h src/application/head/tui/MenuView.cpp
         include/application/head/tui/PlacementView.h src/application/head/tui/PlacementView.cpp
         include/application/head/tui/BattleView.h src/application/head/tui/BattleView.cpp
@@ -100,6 +106,7 @@ if (BUILD_TESTING)
     add_executable(warships_head_tests
             tests/GridGeometryTests.cpp
             tests/KeystrokeTests.cpp
+            tests/PanelScrollingTests.cpp
             tests/PresentationContextTests.cpp
             tests/RenderTests.cpp
             tests/ScreenInputTests.cpp
@@ -107,6 +114,11 @@ if (BUILD_TESTING)
     target_link_libraries(warships_head_tests PRIVATE GTest::gtest_main warships_head)
     include(GoogleTest)
     gtest_discover_tests(warships_head_tests)
+
+    add_executable(warships_head_tui_tests
+            tests/TuiLayoutTests.cpp)
+    target_link_libraries(warships_head_tui_tests PRIVATE GTest::gtest_main warships_head_tui)
+    gtest_discover_tests(warships_head_tui_tests)
 endif()
 
 # Expose settings

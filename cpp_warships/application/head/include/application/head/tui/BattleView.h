@@ -7,10 +7,11 @@
 #include <application/head/common/state/BattleState.h>
 #include <application/head/tui/BoardView.h>
 #include <application/head/tui/FtxuiView.h>
+#include <application/head/tui/KeyHint.h>
+#include <application/head/tui/ScrollPanel.h>
 #include <application/model/BattleJournal.h>
 
 #include <ftxui/dom/elements.hpp>
-#include <ftxui/screen/box.hpp>
 #include <optional>
 
 namespace cpp_warships::head::common {
@@ -29,18 +30,18 @@ namespace cpp_warships::head::tui {
 
     protected:
         [[nodiscard]] ftxui::Element renderElement() override;
+        void publishLayout() override;
 
     private:
-        /** @brief Writes down where the log landed when it was last painted. */
-        void publishLogGeometry() const;
-
-        /** @brief Whether a screen position falls inside the log, which scrolls
-         * on its own. */
-
         const common::PresentationContext& context_;
+        common::input::GridGeometry& geometry_;
         BoardView ownWatersView_;
         BoardView enemyWatersView_;
-        common::input::GridGeometry& geometry_;
-        ftxui::Box logBox_;
+        ScrollPanel ownWatersPanel_;
+        ScrollPanel enemyWatersPanel_;
+        ScrollPanel skillsPanel_;
+        ScrollPanel shortcutsPanel_;
+        KeyHotspots hotspots_;
+        ScrollPanel logPanel_;
     };
 }  // namespace cpp_warships::head::tui

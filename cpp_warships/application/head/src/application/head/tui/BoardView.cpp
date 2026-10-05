@@ -5,6 +5,7 @@
 #include <application/head/tui/BoardView.h>
 #include <application/head/tui/CellAppearance.h>
 #include <application/head/tui/FtxuiPalette.h>
+#include <application/head/tui/ScrollPanel.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -83,8 +84,6 @@ namespace cpp_warships::head::tui {
         const common::Theme& theme,
         const BoardOverlay& overlay
     ) {
-        publishGeometry();
-
         boardWidth_ = board.width();
         boardHeight_ = board.height();
 
@@ -135,7 +134,7 @@ namespace cpp_warships::head::tui {
              ),
              ftxui::hbox(
                  {ftxui::vbox(std::move(rowHeaders)),
-                  ftxui::vbox(std::move(gridRows)) | ftxui::reflect(gridBox_)}
+                  ftxui::vbox(std::move(gridRows)) | reflectWholeBox(gridBox_)}
              )}
         );
     }

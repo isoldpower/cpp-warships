@@ -11,23 +11,39 @@
 namespace cpp_warships::head::tui {
     namespace {
         constexpr int MINIMUM_PANEL_WIDTH = 46;
+        ftxui::Element divider(const common::Theme& theme) {
+            return ftxui::separator() | color(theme.border);
+        }
+
+        ftxui::Element sectionHeading(const common::Theme& theme, const std::string& title) {
+            return ftxui::text(title) | ftxui::bold | color(theme.accent);
+        }
     }  // namespace
 
-    SaveNamingView::SaveNamingView(const common::PresentationContext& context) noexcept
-        : context_(context) {}
+    SaveNamingView::SaveNamingView(
+        const common::PresentationContext& context,
+        common::input::GridGeometry& geometry
+    ) noexcept
+        : context_(context)
+        , geometry_(geometry)
+        , bodyPanel_(common::input::ScreenRegion::NameEntry)
+        , shortcutsPanel_(common::input::ScreenRegion::Shortcuts) {}
+
+    void SaveNamingView::publishLayout() {
+        bodyPanel_.publish(geometry_);
+        shortcutsPanel_.publish(geometry_);
+        hotspots_.publish(geometry_);
+    }
 
     ftxui::Element SaveNamingView::renderElement() {
         const common::Theme& theme = context_.theme();
         const std::string typed = context_.state().naming.typedName;
+        constexpr common::ScreenKind SCREEN = common::ScreenKind::SaveNaming;
 
-        std::vector<ftxui::Element> rows{
-            ftxui::text("NAME THIS MATCH") | ftxui::bold | color(theme.accent) | ftxui::hcenter,
-            ftxui::separator() | color(theme.border),
-            ftxui::hbox(
-                {ftxui::text("name  ") | color(theme.textMuted),
-                 ftxui::text(typed + "_") | ftxui::bold | color(theme.text)}
-            )
-        };
+        std::vector<ftxui::Element> rows{ftxui::hbox(
+            {ftxui::text("name  ") | color(theme.textMuted),
+             ftxui::text(typed + "_") | ftxui::bold | color(theme.text)}
+        )};
 
         if (typed.empty()) {
             rows.push_back(
@@ -35,22 +51,35 @@ namespace cpp_warships::head::tui {
             );
         }
 
-        rows.push_back(ftxui::separator() | color(theme.border));
-
-        std::vector<ftxui::Element> hints{
-            keyHint(theme, "letters", "type a name"),
-            keyHint(theme, "back", "rub one out")
+        std::vector<KeyHint> hints{
+            KeyHint{.key = "letters", .description = "type a name"},
+            KeyHint{.key = "back", .description = "rub one out"}
         };
         if (!typed.empty()) {
-            hints.push_back(keyHint(theme, "enter", "save and quit"));
+            hints.push_back(KeyHint{.key = "enter", .description = "save and quit"});
         }
-        hints.push_back(keyHint(theme, "esc", "back to the menu"));
+        hints.push_back(KeyHint{.key = "esc", .description = "back to the menu"});
 
-        rows.push_back(keyLegend(std::move(hints)));
-        rows.push_back(noticeBlock(theme, context_.application()));
-
-        return ftxui::vbox(std::move(rows)) |
-               ftxui::size(ftxui::WIDTH, ftxui::GREATER_THAN, MINIMUM_PANEL_WIDTH) | ftxui::center |
-               ftxui::border | color(theme.border) | bgcolor(theme.background) | ftxui::flex;
+        return dialogFrame(
+            theme,
+            ftxui::vbox(
+                {bodyPanel_.render(
+                     context_,
+                     SCREEN,
+                     sectionHeading(theme, "NAME THIS MATCH"),
+                     ftxui::vbox(std::move(rows))
+                 ),
+                 divider(theme),
+                 shortcutsPanel_.render(
+                     context_,
+                     SCREEN,
+                     sectionHeading(theme, "KEYS"),
+                     keyLegend(theme, std::move(hints), hotspots_)
+                 ),
+                 noticeBlock(theme, context_.application())}
+            ),
+            MINIMUM_PANEL_WIDTH,
+            isNarrow()
+        );
     }
 }  // namespace cpp_warships::head::tui

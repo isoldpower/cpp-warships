@@ -4,6 +4,7 @@
 #include <application/head/tui/FtxuiNotices.h>
 #include <application/head/tui/FtxuiPalette.h>
 #include <application/head/tui/KeyHint.h>
+#include <application/head/tui/ScrollPanel.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -15,7 +16,15 @@
 
 namespace cpp_warships::head::tui {
     namespace {
+        /** @brief The widest the side panel stands, and the most of the screen it may take,
+         * in percent, so the boards keep the larger share. */
         constexpr int SIDE_PANEL_WIDTH = 46;
+        constexpr int SIDE_PANEL_SHARE_PERCENT = 30;
+        constexpr int WHOLE_PERCENT = 100;
+
+        /** @brief The tallest the strip under the boards stands: a heading over the longest
+         * list of keys the battle shows. */
+        constexpr int BOTTOM_STRIP_HEIGHT = 7;
         constexpr int SKILL_ORDER_LINES = 4;
 
         ftxui::Element standing(const common::Theme& theme, const flow::Match& match) {
@@ -30,10 +39,12 @@ namespace cpp_warships::head::tui {
             return ftxui::text("the enemy fires") | ftxui::bold | color(theme.danger);
         }
 
-        ftxui::Element header(const common::Theme& theme, const flow::Match& match) {
+        ftxui::Element divider(const common::Theme& theme) {
+            return ftxui::separator() | color(theme.border);
+        }
+
+        ftxui::Element roundAndStanding(const common::Theme& theme, const flow::Match& match) {
             std::vector<ftxui::Element> parts{
-                ftxui::text("BATTLE") | ftxui::bold | color(theme.accent),
-                ftxui::filler(),
                 ftxui::text("round " + std::to_string(match.roundNumber())) |
                     color(theme.textMuted),
                 ftxui::text("   "),
@@ -48,16 +59,27 @@ namespace cpp_warships::head::tui {
             return ftxui::hbox(std::move(parts));
         }
 
-        ftxui::Element titledBoard(
+        /** @brief The title and how the battle stands: on one line, or on two when the
+         * screen is too narrow to hold them side by side. */
+        ftxui::Element header(
             const common::Theme& theme,
-            const std::string& title,
-            ftxui::Element board
+            const flow::Match& match,
+            const bool isNarrow
         ) {
-            return ftxui::vbox(
-                {ftxui::text(title) | ftxui::bold | color(theme.textMuted),
-                 ftxui::separator() | color(theme.border),
-                 std::move(board) | ftxui::center | ftxui::flex}
-            );
+            ftxui::Element title = ftxui::text("BATTLE") | ftxui::bold | color(theme.accent);
+            if (isNarrow) {
+                return ftxui::vbox({std::move(title), roundAndStanding(theme, match)});
+            }
+
+            return ftxui::hbox({std::move(title), ftxui::filler(), roundAndStanding(theme, match)});
+        }
+
+        ftxui::Element boardHeading(const common::Theme& theme, const std::string& title) {
+            return ftxui::text(title) | ftxui::bold | color(theme.textMuted);
+        }
+
+        ftxui::Element sectionHeading(const common::Theme& theme, const std::string& title) {
+            return ftxui::text(title) | ftxui::bold | color(theme.accent);
         }
 
         /** @brief How many of each skill are banked, in a settled order rather
@@ -141,52 +163,71 @@ namespace cpp_warships::head::tui {
         }
 
         ftxui::Element skillBank(const common::Theme& theme, const flow::Match& match) {
-            return ftxui::vbox(
-                {ftxui::text("SKILLS") | ftxui::bold | color(theme.accent),
-                 skillCounts(theme, match),
-                 skillOrder(theme, match)}
-            );
+            return ftxui::vbox({skillCounts(theme, match), skillOrder(theme, match)});
         }
 
-        /** @brief A fixed window on the story so far, newest first, scrolled back by @p skipped. */
+        /** @brief The whole story so far, newest first, for the log's panel to scroll through. */
         ftxui::Element journalLines(
             const common::Theme& theme,
-            const model::BattleJournal& journal,
-            int skipped
+            const model::BattleJournal& journal
         ) {
             const std::deque<flow::MatchEvent>& entries = journal.entries();
-            const int total = static_cast<int>(entries.size());
-            const int from = std::clamp(skipped, 0, common::state::furthestLogScroll(total));
 
             std::vector<ftxui::Element> lines;
-            for (int step = 0; step < common::state::LOG_VISIBLE_LINES; ++step) {
-                const int index = total - 1 - from - step;
-                if (index < 0) {
-                    lines.push_back(ftxui::text(""));
-                    continue;
-                }
-
-                const common::render::EventLine line =
-                    common::render::narrate(entries[static_cast<std::size_t>(index)], theme);
+            for (auto entry = entries.rbegin(); entry != entries.rend(); ++entry) {
+                const common::render::EventLine line = common::render::narrate(*entry, theme);
                 lines.push_back(ftxui::text(line.text) | color(line.color));
             }
 
-            return ftxui::vbox(std::move(lines)) |
-                   ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, common::state::LOG_VISIBLE_LINES);
+            if (lines.empty()) {
+                lines.push_back(ftxui::text("nothing has happened yet") | color(theme.textMuted));
+            }
+
+            return ftxui::vbox(std::move(lines));
+        }
+
+        /** @brief How the log is shown: open in a column of its own, open but able to fold,
+         * or folded down to its heading. */
+        enum class LogFolding {
+            Fixed,
+            Open,
+            Folded,
+        };
+
+        /** @brief The newest line of the story, squeezed to whatever room is left beside it. */
+        ftxui::Element newestLine(const common::Theme& theme, const model::BattleJournal& journal) {
+            if (journal.entries().empty()) {
+                return ftxui::filler();
+            }
+
+            const common::render::EventLine line =
+                common::render::narrate(journal.entries().back(), theme);
+            return ftxui::text("  " + line.text) | color(theme.textMuted) | ftxui::xflex_shrink |
+                   ftxui::xflex_grow;
         }
 
         ftxui::Element journalHeading(
             const common::Theme& theme,
             const model::BattleJournal& journal,
-            int skipped
+            int skipped,
+            const LogFolding folding
         ) {
             const int total = static_cast<int>(journal.entries().size());
-            const int from = std::clamp(skipped, 0, common::state::furthestLogScroll(total));
+            const int from = std::clamp(skipped, 0, std::max(0, total - 1));
 
-            std::vector<ftxui::Element> parts{
-                ftxui::text("LOG") | ftxui::bold | color(theme.accent),
-                ftxui::filler()
-            };
+            if (folding == LogFolding::Folded) {
+                return ftxui::hbox(
+                    {sectionHeading(theme, "LOG"),
+                     newestLine(theme, journal),
+                     ftxui::text("  l show") | color(theme.textMuted)}
+                );
+            }
+
+            std::vector<ftxui::Element> parts{sectionHeading(theme, "LOG"), ftxui::filler()};
+
+            if (folding == LogFolding::Open) {
+                parts.push_back(ftxui::text("l hide  ") | color(theme.textMuted));
+            }
 
             if (from > 0) {
                 parts.push_back(
@@ -197,22 +238,111 @@ namespace cpp_warships::head::tui {
             return ftxui::hbox(std::move(parts));
         }
 
-        ftxui::Element legend(const common::Theme& theme, const flow::Match& match) {
+        std::vector<KeyHint> legend(const flow::Match& match, const bool canFoldLog) {
             if (match.phase() == flow::MatchPhase::Finished) {
-                return keyLegend({keyHint(theme, "esc", "back to the menu")});
+                return {KeyHint{.key = "esc", .description = "back to the menu"}};
             }
 
-            std::vector<ftxui::Element> hints{
-                keyHint(theme, "arrows", "take aim"),
-                keyHint(theme, "enter", "fire"),
-                keyHint(theme, "esc", "back to the menu")
+            std::vector<KeyHint> hints{
+                KeyHint{.key = "arrows", .description = "take aim"},
+                KeyHint{.key = "enter", .description = "fire"},
+                KeyHint{.key = "esc", .description = "back to the menu"}
             };
 
             if (!match.skills().isEmpty()) {
-                hints.insert(hints.begin() + 2, keyHint(theme, "k", "use the next skill"));
+                hints.insert(
+                    hints.begin() + 2,
+                    KeyHint{.key = "k", .description = "use the next skill"}
+                );
             }
 
-            return keyLegend(std::move(hints));
+            if (canFoldLog) {
+                hints.insert(
+                    hints.end() - 1,
+                    KeyHint{.key = "l", .description = "show or hide the log"}
+                );
+            }
+
+            return hints;
+        }
+        /** @brief Every panel of the battle screen, drawn and waiting to be arranged. */
+        struct BattlePanels {
+            ftxui::Element ownWaters;
+            ftxui::Element enemyWaters;
+            ftxui::Element skills;
+            ftxui::Element story;
+            ftxui::Element shortcuts;
+            bool isStoryFolded = false;
+        };
+
+        /** @brief A board's panel, growing into spare height and the first to give it up. */
+        ftxui::Element boardInColumn(ftxui::Element board) {
+            return std::move(board) | ftxui::yflex_grow |
+                   ftxui::yflex_shrink_factor(BOARD_PANEL_SHRINK_WEIGHT);
+        }
+
+        /** @brief A phone-sized screen: every panel in one column, the enemy's waters on top. */
+        ftxui::Element stackedBody(const common::Theme& theme, BattlePanels panels) {
+            return ftxui::vbox(
+                {boardInColumn(std::move(panels.enemyWaters)),
+                 divider(theme),
+                 boardInColumn(std::move(panels.ownWaters)),
+                 divider(theme),
+                 std::move(panels.skills),
+                 divider(theme),
+                 panels.isStoryFolded ? std::move(panels.story)
+                                      : std::move(panels.story) | ftxui::yflex_grow,
+                 divider(theme),
+                 std::move(panels.shortcuts)}
+            );
+        }
+
+        /** @brief A laptop-sized screen: the boards side by side, the skills, log and keys
+         * in a strip under them that a long log can never make taller. */
+        ftxui::Element stripBelowBody(const common::Theme& theme, BattlePanels panels) {
+            return ftxui::vbox(
+                {boardInColumn(
+                     ftxui::hbox(
+                         {std::move(panels.ownWaters) | ftxui::flex,
+                          divider(theme),
+                          std::move(panels.enemyWaters) | ftxui::flex}
+                     )
+                 ),
+                 divider(theme),
+                 ftxui::hbox(
+                     {std::move(panels.skills),
+                      divider(theme),
+                      std::move(panels.story) | ftxui::xflex,
+                      divider(theme),
+                      std::move(panels.shortcuts)}
+                 ) | ftxui::size(ftxui::HEIGHT, ftxui::LESS_THAN, BOTTOM_STRIP_HEIGHT) |
+                     ftxui::yflex_shrink}
+            );
+        }
+
+        /** @brief A wide screen: the boards side by side, everything else in a side bar
+         * that never takes more than its share of @p screenWidth. */
+        ftxui::Element sideBarBody(
+            const common::Theme& theme,
+            BattlePanels panels,
+            const int screenWidth
+        ) {
+            const int sidePanelWidth =
+                std::min(SIDE_PANEL_WIDTH, screenWidth * SIDE_PANEL_SHARE_PERCENT / WHOLE_PERCENT);
+
+            return ftxui::hbox(
+                {std::move(panels.ownWaters) | ftxui::flex,
+                 divider(theme),
+                 std::move(panels.enemyWaters) | ftxui::flex,
+                 divider(theme),
+                 ftxui::vbox(
+                     {std::move(panels.skills),
+                      divider(theme),
+                      std::move(panels.story) | ftxui::yflex_grow,
+                      divider(theme),
+                      std::move(panels.shortcuts)}
+                 ) | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, sidePanelWidth)}
+            );
         }
     }  // namespace
 
@@ -221,60 +351,93 @@ namespace cpp_warships::head::tui {
         common::input::GridGeometry& geometry
     ) noexcept
         : context_(context)
+        , geometry_(geometry)
         , ownWatersView_(geometry, common::input::ScreenRegion::OwnWaters)
         , enemyWatersView_(geometry, common::input::ScreenRegion::EnemyWaters)
-        , geometry_(geometry) {}
+        , ownWatersPanel_(common::input::ScreenRegion::OwnWaters)
+        , enemyWatersPanel_(common::input::ScreenRegion::EnemyWaters)
+        , skillsPanel_(common::input::ScreenRegion::Skills)
+        , shortcutsPanel_(common::input::ScreenRegion::Shortcuts)
+        , logPanel_(common::input::ScreenRegion::Log) {}
 
-    void BattleView::publishLogGeometry() const {
-        if (logBox_.x_max < logBox_.x_min) {
-            return;
+    void BattleView::publishLayout() {
+        geometry_.rememberFoldable(common::input::ScreenRegion::Log, isNarrow());
+        ownWatersView_.publishGeometry();
+        enemyWatersView_.publishGeometry();
+        for (
+            const ScrollPanel* panel :
+            {&ownWatersPanel_, &enemyWatersPanel_, &skillsPanel_, &shortcutsPanel_, &logPanel_}
+        ) {
+            panel->publish(geometry_);
         }
-
-        geometry_.rememberLog(
-            logBox_.x_min,
-            logBox_.y_min,
-            logBox_.x_max - logBox_.x_min + 1,
-            logBox_.y_max - logBox_.y_min + 1
-        );
+        hotspots_.publish(geometry_);
     }
 
     ftxui::Element BattleView::renderElement() {
-        publishLogGeometry();
-
         const common::Theme& theme = context_.theme();
         const flow::Match& match = context_.game().match();
         const model::BattleJournal& journal = context_.game().journal();
         const common::state::BattleState& state = context_.state().battle;
+        constexpr common::ScreenKind SCREEN = common::ScreenKind::Battle;
 
         BoardOverlay ownOverlay;
         BoardOverlay enemyOverlay;
         enemyOverlay.cursor = state.target;
 
-        ftxui::Element ownWaters =
-            ownWatersView_.render(match.playerBoard(), core::Visibility::Owner, theme, ownOverlay);
-        ftxui::Element enemyWaters =
-            enemyWatersView_
-                .render(match.computerBoard(), core::Visibility::Opponent, theme, enemyOverlay);
+        ftxui::Element ownWaters = ownWatersPanel_.render(
+            context_,
+            SCREEN,
+            boardHeading(theme, "YOUR WATERS"),
+            ownWatersView_.render(match.playerBoard(), core::Visibility::Owner, theme, ownOverlay) |
+                ftxui::center
+        );
+        ftxui::Element enemyWaters = enemyWatersPanel_.render(
+            context_,
+            SCREEN,
+            boardHeading(theme, "ENEMY WATERS"),
+            enemyWatersView_.render(
+                match.computerBoard(),
+                core::Visibility::Opponent,
+                theme,
+                enemyOverlay
+            ) | ftxui::center
+        );
+        ftxui::Element skills =
+            skillsPanel_
+                .render(context_, SCREEN, sectionHeading(theme, "SKILLS"), skillBank(theme, match));
+        ftxui::Element shortcuts = shortcutsPanel_.render(
+            context_,
+            SCREEN,
+            sectionHeading(theme, "KEYS"),
+            keyLegend(theme, legend(match, isNarrow()), hotspots_)
+        );
+        const LogFolding folding = !isNarrow()            ? LogFolding::Fixed
+                                   : state.isLogCollapsed ? LogFolding::Folded
+                                                          : LogFolding::Open;
+        ftxui::Element story = logPanel_.render(
+            context_,
+            SCREEN,
+            journalHeading(theme, journal, state.logScroll, folding),
+            folding == LogFolding::Folded ? ftxui::emptyElement() : journalLines(theme, journal)
+        );
+
+        BattlePanels panels{
+            .ownWaters = std::move(ownWaters),
+            .enemyWaters = std::move(enemyWaters),
+            .skills = std::move(skills),
+            .story = std::move(story),
+            .shortcuts = std::move(shortcuts),
+            .isStoryFolded = folding == LogFolding::Folded
+        };
+        ftxui::Element body = isNarrow() ? stackedBody(theme, std::move(panels))
+                              : isLaptop()
+                                  ? stripBelowBody(theme, std::move(panels))
+                                  : sideBarBody(theme, std::move(panels), availableWidth());
 
         return ftxui::vbox(
-                   {header(theme, match),
-                    ftxui::separator() | color(theme.border),
-                    ftxui::hbox(
-                        {titledBoard(theme, "YOUR WATERS", std::move(ownWaters)) | ftxui::flex,
-                         ftxui::separator() | color(theme.border),
-                         titledBoard(theme, "ENEMY WATERS", std::move(enemyWaters)) | ftxui::flex,
-                         ftxui::separator() | color(theme.border),
-                         ftxui::vbox(
-                             {skillBank(theme, match),
-                              ftxui::separator() | color(theme.border),
-                              legend(theme, match),
-                              ftxui::separator() | color(theme.border),
-                              journalHeading(theme, journal, state.logScroll),
-                              journalLines(theme, journal, state.logScroll) |
-                                  ftxui::reflect(logBox_),
-                              ftxui::filler()}
-                         ) | ftxui::size(ftxui::WIDTH, ftxui::EQUAL, SIDE_PANEL_WIDTH)}
-                    ) | ftxui::flex,
+                   {header(theme, match, isNarrow()),
+                    divider(theme),
+                    std::move(body) | ftxui::flex,
                     noticeBlock(theme, context_.application())}
                ) |
                ftxui::border | color(theme.border) | bgcolor(theme.background) | ftxui::flex;

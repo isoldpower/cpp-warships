@@ -11,6 +11,17 @@ namespace cpp_warships::head::common::input {
 
     bool isWheelRolled(const Keystroke& stroke) {
         return isPointer(stroke) && (stroke.button == PointerButton::WheelUp ||
-                                     stroke.button == PointerButton::WheelDown);
+                                     stroke.button == PointerButton::WheelDown ||
+                                     stroke.button == PointerButton::WheelLeft ||
+                                     stroke.button == PointerButton::WheelRight);
+    }
+
+    bool isWheelRolledAcross(const Keystroke& stroke) {
+        if (!isWheelRolled(stroke)) {
+            return false;
+        }
+
+        return stroke.isShiftHeld || stroke.button == PointerButton::WheelLeft ||
+               stroke.button == PointerButton::WheelRight;
     }
 }  // namespace cpp_warships::head::common::input

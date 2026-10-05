@@ -53,6 +53,10 @@ namespace cpp_warships::head::common::input::keys {
         return context_.game().match().playerBoard();
     }
 
+    ScreenRegion MovePlacementCursorKey::region() const {
+        return ScreenRegion::OwnWaters;
+    }
+
     bool TurnShipKey::matches(const Keystroke& stroke) const {
         return isCharacter(stroke, "r");
     }
@@ -129,19 +133,6 @@ namespace cpp_warships::head::common::input::keys {
         context_.state().placement.cursor = cell;
 
         return model::events::ShipRemovalRequested{.coordinate = cell};
-    }
-
-    bool PickShipLengthWithWheelKey::matches(const Keystroke& stroke) const {
-        return cellUnderPointer(stroke).has_value() && isWheelRolled(stroke);
-    }
-
-    std::optional<model::events::GameEvent> PickShipLengthWithWheelKey::interpret(
-        const Keystroke& stroke
-    ) {
-        context_.state().placement.cursor = *cellUnderPointer(stroke);
-        pickNextShipLength(context_);
-
-        return std::nullopt;
     }
 
     bool AimWithPointerKey::matches(const Keystroke& stroke) const {

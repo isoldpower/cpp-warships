@@ -7,6 +7,8 @@
 #include <application/head/common/state/PlacementState.h>
 #include <application/head/tui/BoardView.h>
 #include <application/head/tui/FtxuiView.h>
+#include <application/head/tui/KeyHint.h>
+#include <application/head/tui/ScrollPanel.h>
 
 #include <ftxui/dom/elements.hpp>
 #include <optional>
@@ -27,9 +29,15 @@ namespace cpp_warships::head::tui {
 
     protected:
         [[nodiscard]] ftxui::Element renderElement() override;
+        void publishLayout() override;
 
     private:
         const common::PresentationContext& context_;
+        common::input::GridGeometry& geometry_;
         BoardView boardView_;
+        ScrollPanel boardPanel_;
+        ScrollPanel fleetPanel_;
+        ScrollPanel shortcutsPanel_;
+        KeyHotspots hotspots_;
     };
 }  // namespace cpp_warships::head::tui
