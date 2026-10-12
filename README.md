@@ -1,5 +1,7 @@
 # WarShips Game Application
 
+**Live:** [nikitalapin.dev/projects/warships-game](https://nikitalapin.dev/projects/warships-game)
+
 A terminal battleships game in C++20, built as a study in keeping game logic and
 presentation genuinely apart.
 
